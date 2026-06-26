@@ -38,7 +38,7 @@ export function Navbar() {
           : "backdrop-blur-md bg-[#0C0C0E]/75 border-b border-white/5"
       )}
     >
-      <div className="max-w-6xl mx-auto w-full flex items-center justify-between">
+      <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
         {/* Logo */}
         <Link 
           to={user ? "/dashboard" : "/"} 

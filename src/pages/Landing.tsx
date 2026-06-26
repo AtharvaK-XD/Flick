@@ -55,7 +55,7 @@ export function Landing() {
       `}</style>
 
       {/* Main Hero Section */}
-      <main className="max-w-4xl mx-auto px-6 pt-40 md:pt-48 flex-1 flex flex-col justify-center items-center text-center relative z-10">
+      <main className="max-w-6xl mx-auto px-6 pt-40 md:pt-48 lg:pt-56 flex-1 flex flex-col justify-center items-center text-center relative z-10">
         <motion.div
           variants={containerVariants}
           initial="initial"
@@ -64,7 +64,7 @@ export function Landing() {
         >
           {/* Main typographics */}
           <motion.div variants={itemVariants} className="space-y-4">
-            <h1 className="font-display text-6xl md:text-8xl tracking-tighter leading-[0.95] flex flex-col items-center">
+            <h1 className="font-display text-6xl md:text-8xl lg:text-[100px] xl:text-[120px] tracking-tighter leading-[0.95] flex flex-col items-center">
               <span className="font-light text-[var(--text-secondary)] select-none">
                 Your notes.
               </span>
@@ -77,7 +77,7 @@ export function Landing() {
           {/* Subtitle */}
           <motion.div 
             variants={itemVariants}
-            className="text-base md:text-lg text-[var(--text-secondary)] max-w-lg mx-auto font-normal leading-relaxed select-none"
+            className="text-base md:text-lg lg:text-xl text-[var(--text-secondary)] max-w-2xl mx-auto font-normal leading-relaxed select-none"
           >
             Paste anything. Gemini AI builds the cards.
             <br />
@@ -100,7 +100,7 @@ export function Landing() {
       {/* Feature Demos Area (Below Fold) */}
       <section 
         ref={featuresRef}
-        className="max-w-5xl mx-auto px-6 py-28 md:py-36 relative z-10 w-full"
+        className="max-w-7xl mx-auto px-6 py-28 md:py-36 relative z-10 w-full"
       >
         <motion.div
           animate={isFeaturesInView ? "animate" : "initial"}
@@ -116,7 +116,7 @@ export function Landing() {
           {/* Feature 1: The Interactive Card */}
           <motion.div 
             variants={itemVariants}
-            className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center text-left"
+            className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-20 xl:gap-32 items-center text-left"
           >
             <div className="space-y-4">
               <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest block">
@@ -133,7 +133,7 @@ export function Landing() {
             
             {/* Interactive Card Mockup */}
             <div className="flex justify-center lg:justify-end">
-              <div className="w-full max-w-[420px] bg-[#161618]/50 border border-white/5 p-5 rounded-2xl flex items-center justify-center">
+              <div className="w-full max-w-[500px] bg-[#161618]/50 border border-white/5 p-5 rounded-2xl flex items-center justify-center">
                 <FlipCard
                   front="How does the SM-2 algorithm schedule reviews?"
                   back="It updates review intervals by computing an Ease Factor based on your rating, widening times for easy cards and shrinking them for hard ones."
@@ -149,7 +149,7 @@ export function Landing() {
           {/* Feature 2: Generator Demo */}
           <motion.div 
             variants={itemVariants}
-            className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center text-left"
+            className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-20 xl:gap-32 items-center text-left"
           >
             <div className="lg:order-2 space-y-4">
               <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest block">
@@ -164,8 +164,8 @@ export function Landing() {
             </div>
 
             {/* Form Mockup */}
-            <div className="lg:order-1 flex justify-center lg:justify-start">
-              <div className="w-full max-w-[420px] bg-[#161618] border border-white/5 rounded-xl p-5 font-sans space-y-4 text-xs select-none">
+            <div className="flex justify-center lg:justify-start">
+              <div className="w-full max-w-[500px] bg-[#161618] border border-white/5 rounded-xl p-5 font-sans space-y-4 text-xs select-none">
                 <div className="flex items-center gap-1 border-b border-white/5 pb-2 text-[10px] text-[var(--text-secondary)] font-mono uppercase">
                   <span className="text-purple-400 border-b border-purple-400 pb-2 px-1">Text</span>
                   <span className="px-2">PDF</span>
@@ -189,7 +189,7 @@ export function Landing() {
           {/* Feature 3: Spacing visualization */}
           <motion.div 
             variants={itemVariants}
-            className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center text-left"
+            className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-20 xl:gap-32 items-center text-left"
           >
             <div className="space-y-4">
               <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest block">
@@ -205,7 +205,7 @@ export function Landing() {
             
             {/* Calendar / Graph Mockup */}
             <div className="flex justify-center lg:justify-end">
-              <div className="w-full max-w-[420px] bg-[#161618] border border-white/5 p-5 rounded-xl space-y-4 text-xs font-mono select-none">
+              <div className="w-full max-w-[500px] bg-[#161618] border border-white/5 p-5 rounded-xl space-y-4 text-xs font-mono select-none">
                 <div className="flex justify-between text-[10px] text-[var(--text-secondary)]">
                   <span>MASTERY OVERVIEW</span>
                   <span className="text-purple-400">76%</span>

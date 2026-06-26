@@ -110,7 +110,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Main Panel Content Area */}
         <div className="flex-1 md:pl-[260px] flex flex-col min-w-0">
-          <main className="flex-1 p-6 md:p-10 max-w-5xl w-full mx-auto relative z-10">
+          <main className="flex-1 p-6 md:p-10 lg:p-12 max-w-7xl w-full mx-auto relative z-10">
             {children}
           </main>
         </div>

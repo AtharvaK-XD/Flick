@@ -231,7 +231,7 @@ export function StudyMode({
       {/* Bottom Controls */}
       <div className="px-6 py-6 border-t border-white/5 flex flex-col items-center bg-[#0C0C0E]">
         {!isFinished && isFlipped ? (
-          <div className="w-full max-w-[500px] grid grid-cols-4 gap-3 animate-fade-up">
+          <div className="w-full max-w-[500px] md:max-w-[620px] lg:max-w-[700px] grid grid-cols-4 gap-3 animate-fade-up">
             {/* Again Button */}
             <button
               onClick={() => handleRate(0)}
@@ -271,7 +271,7 @@ export function StudyMode({
         ) : !isFinished ? (
           <Button
             onClick={() => setIsFlipped(true)}
-            className="w-full max-w-[500px] py-3 text-sm font-semibold"
+            className="w-full max-w-[500px] md:max-w-[620px] lg:max-w-[700px] py-3 text-sm font-semibold"
           >
             Reveal Answer
           </Button>
