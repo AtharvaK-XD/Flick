@@ -235,7 +235,7 @@ export function StudyMode({
             {/* Again Button */}
             <button
               onClick={() => handleRate(0)}
-              className="flex flex-col items-center justify-center py-2.5 rounded-lg border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 hover:border-red-500/40 text-red-400 transition-colors"
+              className="flex flex-col items-center justify-center py-2.5 rounded-lg border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 hover:border-red-500/40 text-red-400 transition-all duration-300 active:scale-[0.96] cursor-pointer"
             >
               <span className="text-xs font-semibold">Again</span>
               <span className="text-[10px] font-mono text-red-400/60 mt-0.5">[1]</span>
@@ -244,7 +244,7 @@ export function StudyMode({
             {/* Hard Button */}
             <button
               onClick={() => handleRate(1)}
-              className="flex flex-col items-center justify-center py-2.5 rounded-lg border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/40 text-amber-400 transition-colors"
+              className="flex flex-col items-center justify-center py-2.5 rounded-lg border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/40 text-amber-400 transition-all duration-300 active:scale-[0.96] cursor-pointer"
             >
               <span className="text-xs font-semibold">Hard</span>
               <span className="text-[10px] font-mono text-amber-400/60 mt-0.5">[2]</span>
@@ -253,7 +253,7 @@ export function StudyMode({
             {/* Good Button */}
             <button
               onClick={() => handleRate(2)}
-              className="flex flex-col items-center justify-center py-2.5 rounded-lg border border-purple-500/20 bg-purple-500/5 hover:bg-purple-500/10 hover:border-purple-500/40 text-purple-400 transition-colors"
+              className="flex flex-col items-center justify-center py-2.5 rounded-lg border border-purple-500/20 bg-purple-500/5 hover:bg-purple-500/10 hover:border-purple-500/40 text-purple-400 transition-all duration-300 active:scale-[0.96] cursor-pointer"
             >
               <span className="text-xs font-semibold">Good</span>
               <span className="text-[10px] font-mono text-purple-400/60 mt-0.5">[3]</span>
@@ -262,7 +262,7 @@ export function StudyMode({
             {/* Easy Button */}
             <button
               onClick={() => handleRate(3)}
-              className="flex flex-col items-center justify-center py-2.5 rounded-lg border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 hover:border-emerald-500/40 text-emerald-400 transition-colors"
+              className="flex flex-col items-center justify-center py-2.5 rounded-lg border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 hover:border-emerald-500/40 text-emerald-400 transition-all duration-300 active:scale-[0.96] cursor-pointer"
             >
               <span className="text-xs font-semibold">Easy</span>
               <span className="text-[10px] font-mono text-emerald-400/60 mt-0.5">[4]</span>

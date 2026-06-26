@@ -105,7 +105,6 @@ export function Login() {
       </Card3D>
     </PageWrapper>
   );
-  );
 }
 
 export default Login;

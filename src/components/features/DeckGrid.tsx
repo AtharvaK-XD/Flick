@@ -66,7 +66,7 @@ export function DeckGrid({ decks, allCards }: DeckGridProps) {
             key={deck.id}
             maxRotation={6}
             onClick={() => navigate(`/deck/${deck.id}`)}
-            className="group cursor-pointer bg-[#161618] border border-white/5 hover:border-white/10 rounded-xl p-5 flex flex-col justify-between h-[160px] relative overflow-hidden transition-all duration-300 shadow-sm"
+            className="group cursor-pointer bg-[#161618] border border-white/5 hover:border-purple-500/25 rounded-xl p-5 flex flex-col justify-between h-[160px] relative overflow-hidden transition-all duration-500 shadow-sm hover:shadow-[0_0_20px_rgba(124,58,237,0.06)]"
           >
             {/* Top Row */}
             <div className="flex justify-between items-start gap-4">

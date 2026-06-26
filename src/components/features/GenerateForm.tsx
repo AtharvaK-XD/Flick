@@ -398,22 +398,32 @@ export function GenerateForm({ onSaveDeck }: GenerateFormProps) {
               <label className="text-xs font-mono text-[var(--text-secondary)] uppercase">
                 Number of Cards
               </label>
-              <div className="flex items-center gap-2 bg-[#0C0C0E] border border-white/5 rounded-lg p-1">
-                {[5, 10, 15, 20].map((num) => (
-                  <button
-                    key={num}
-                    type="button"
-                    onClick={() => setCardCount(num)}
-                    className={cn(
-                      "flex-1 py-1.5 text-xs font-medium rounded-md transition-colors duration-150",
-                      cardCount === num
-                        ? "bg-purple-600 text-white"
-                        : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                    )}
-                  >
-                    {num}
-                  </button>
-                ))}
+              <div className="flex items-center gap-2 bg-[#0C0C0E] border border-white/5 rounded-lg p-1 relative">
+                {[5, 10, 15, 20].map((num) => {
+                  const isActive = cardCount === num;
+                  return (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => setCardCount(num)}
+                      className={cn(
+                        "relative flex-1 py-1.5 text-xs font-medium rounded-md transition-colors duration-200 z-10 focus:outline-none",
+                        isActive
+                          ? "text-white"
+                          : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                      )}
+                    >
+                      <span className="relative z-10">{num}</span>
+                      {isActive && (
+                        <motion.div
+                          layoutId="activeCardCountPill"
+                          className="absolute inset-0 bg-purple-600 rounded-md z-0"
+                          transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+                        />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
