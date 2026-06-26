@@ -7,7 +7,7 @@ import { useToast } from '../components/ui/Toast';
 
 export function Login() {
   const navigate = useNavigate();
-  const { user, signInWithGoogle, loading } = useAuth();
+  const { signInWithGoogle } = useAuth();
   const { toast } = useToast();
   const [isSigningIn, setIsSigningIn] = useState(false);
 
@@ -32,28 +32,58 @@ export function Login() {
 
   return (
     <PageWrapper className="min-h-screen bg-[#0C0C0E] flex items-center justify-center p-6 relative overflow-hidden select-none">
-      {/* Background glow overlay */}
-      <div className="absolute w-[40vw] h-[40vh] bg-purple-600/5 rounded-full blur-[100px] pointer-events-none" />
+      {/* Floating dynamic backdrop orbs */}
+      <div 
+        className="absolute top-[-10%] left-[-10%] w-[60vw] h-[60vh] rounded-full blur-[130px] pointer-events-none select-none" 
+        style={{ 
+          background: 'radial-gradient(circle, rgba(124,58,237,0.15) 0%, transparent 70%)',
+          animation: 'float1 18s infinite ease-in-out' 
+        }} 
+      />
+      <div 
+        className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vh] rounded-full blur-[150px] pointer-events-none select-none" 
+        style={{ 
+          background: 'radial-gradient(circle, rgba(79,70,229,0.12) 0%, transparent 70%)',
+          animation: 'float2 24s infinite ease-in-out' 
+        }} 
+      />
 
-      <Card3D maxRotation={8} className="w-full max-w-sm bg-[#161618] border border-white/5 p-8 rounded-xl shadow-2xl space-y-8 text-center relative z-10">
-        {/* Title Logo */}
-        <div className="space-y-2">
-          <h1 className="font-display font-medium text-2xl tracking-tighter text-white">
-            flick
+      <style>{`
+        @keyframes float1 {
+          0%, 100% { transform: translate(0px, 0px) scale(1); }
+          50% { transform: translate(50px, -80px) scale(1.15); }
+        }
+        @keyframes float2 {
+          0%, 100% { transform: translate(0px, 0px) scale(1); }
+          50% { transform: translate(-70px, 50px) scale(0.9); }
+        }
+      `}</style>
+
+      {/* Glassmorphic 3D Card Container */}
+      <Card3D 
+        maxRotation={8} 
+        className="w-full max-w-sm backdrop-blur-xl bg-[#161618]/70 border border-white/10 p-8 rounded-2xl shadow-[0_0_60px_rgba(124,58,237,0.15)] hover:border-purple-500/20 transition-all duration-500 space-y-8 text-center relative z-10"
+      >
+        {/* Title Logo (Upgraded Gradient Text) */}
+        <div className="space-y-2.5">
+          <h1 className="font-display font-bold text-4xl tracking-tighter bg-gradient-to-r from-purple-400 via-indigo-200 to-purple-300 bg-clip-text text-transparent select-none">
+            Flick
           </h1>
-          <p className="text-xs text-[var(--text-secondary)] font-normal">
-            Sign in to continue
+          <p className="text-xs text-[var(--text-secondary)] font-normal leading-relaxed">
+            AI-Powered Active Recall. 
+            <br />
+            Sign in to continue.
           </p>
         </div>
 
-        {/* Google sign-in button */}
+        {/* Google sign-in button (frosted design) */}
         <div className="pt-2">
           <button
             onClick={handleSignIn}
             disabled={isSigningIn}
-            className="w-full inline-flex items-center justify-center gap-3 border border-white/5 hover:border-white/10 bg-[#0C0C0E] hover:bg-[#1E1E22] active:bg-black/20 text-xs font-semibold px-4 py-3 rounded-lg transition-colors text-[var(--text-primary)]"
+            className="w-full inline-flex items-center justify-center gap-3 border border-white/10 hover:border-purple-500/40 bg-[#0C0C0E] hover:bg-[#0C0C0E]/90 hover:shadow-[0_0_25px_rgba(124,58,237,0.2)] active:scale-[0.98] text-xs font-semibold px-4 py-3.5 rounded-xl transition-all duration-300 text-[var(--text-primary)] cursor-pointer"
           >
-            {/* Minimal SVG Google Icon */}
+            {/* SVG Google Icon */}
             <svg 
               className="w-4 h-4 shrink-0" 
               viewBox="0 0 24 24" 
@@ -74,6 +104,7 @@ export function Login() {
         </p>
       </Card3D>
     </PageWrapper>
+  );
   );
 }
 

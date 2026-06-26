@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, useInView } from 'framer-motion';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import FlipCard from '../components/ui/FlipCard';
 
@@ -235,7 +236,7 @@ export function Landing() {
       <footer className="w-full border-t border-white/5 py-6 px-6 relative z-10 bg-[#0C0C0E]">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[var(--text-secondary)]">
           <div className="flex items-center gap-3">
-            <span className="font-display font-medium text-white tracking-tight">flick</span>
+            <span className="font-display font-medium text-white tracking-tight">Flick</span>
             <span className="text-[var(--text-muted)]">|</span>
             <span>Study smarter, remember forever.</span>
           </div>

@@ -44,7 +44,7 @@ export function Navbar() {
           to={user ? "/dashboard" : "/"} 
           className="font-display font-medium text-lg tracking-tight hover:opacity-80 transition-opacity"
         >
-          flick
+          Flick
         </Link>
 
         {/* Navigation / User controls */}

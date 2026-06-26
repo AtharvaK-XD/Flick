@@ -39,7 +39,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="space-y-8">
             <div className="flex items-center gap-2 px-1">
               <span className="font-display font-medium text-lg tracking-tight select-none">
-                flick
+                Flick
               </span>
               {isDemoMode && (
                 <span className="text-[9px] bg-purple-500/10 text-purple-400 border border-purple-500/20 px-1.5 py-0.5 rounded-full font-mono uppercase tracking-wider">
