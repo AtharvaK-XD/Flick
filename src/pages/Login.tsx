@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Card3D } from '../components/ui/Card3D';
@@ -11,12 +11,7 @@ export function Login() {
   const { toast } = useToast();
   const [isSigningIn, setIsSigningIn] = useState(false);
 
-  // If user is already authenticated, redirect to dashboard
-  useEffect(() => {
-    if (!loading && user) {
-      navigate('/dashboard');
-    }
-  }, [user, loading, navigate]);
+
 
   const handleSignIn = async () => {
     setIsSigningIn(true);

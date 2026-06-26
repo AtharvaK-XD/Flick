@@ -14,11 +14,7 @@ export function Landing() {
   const isFeaturesInView = useInView(featuresRef, { once: true, margin: "-100px" });
 
   const handleCTA = () => {
-    if (user) {
-      navigate('/dashboard');
-    } else {
-      navigate('/login');
-    }
+    navigate('/login');
   };
 
   const containerVariants = {
@@ -90,7 +86,7 @@ export function Landing() {
               onClick={handleCTA}
               className="inline-flex items-center gap-2 border border-white/10 hover:border-white/20 bg-[#161618] hover:bg-[#1E1E22] active:bg-black/20 text-sm font-medium px-6 py-3 rounded-lg transition-all duration-200"
             >
-              <span>{user ? 'Go to Dashboard' : 'Start with Google'}</span>
+              <span>Start with Google</span>
               <ArrowRight size={15} />
             </button>
           </motion.div>
