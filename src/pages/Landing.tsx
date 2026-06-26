@@ -1,13 +1,10 @@
 import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, useInView } from 'framer-motion';
 import { ArrowRight, Sparkles } from 'lucide-react';
-import { useAuth } from '../hooks/useAuth';
 import FlipCard from '../components/ui/FlipCard';
 
 export function Landing() {
   const navigate = useNavigate();
-  const { user } = useAuth();
 
   // Scroll animations references
   const featuresRef = useRef(null);

@@ -149,7 +149,7 @@ export function useAuth() {
       }
       return { error: null };
     }
-
+    try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
