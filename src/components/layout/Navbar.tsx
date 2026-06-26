@@ -5,10 +5,18 @@ import { useAuth } from '../../hooks/useAuth';
 import { LogOut, Plus } from 'lucide-react';
 
 export function Navbar() {
-  const { user, signOut, isDemoMode } = useAuth();
+  const { user, signOut, signInWithGoogle, isDemoMode } = useAuth();
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
   const isLanding = location.pathname === '/';
+
+  const handleSignIn = async () => {
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -126,12 +134,12 @@ export function Navbar() {
               </div>
             </>
           ) : (
-            <Link
-              to="/login"
-              className="text-xs font-medium border border-white/5 bg-[#161618] hover:bg-[#1E1E22] px-3.5 py-1.5 rounded-lg transition-colors text-[var(--text-primary)]"
+            <button
+              onClick={handleSignIn}
+              className="text-xs font-medium border border-white/5 bg-[#161618] hover:bg-[#1E1E22] px-3.5 py-1.5 rounded-lg transition-colors text-[var(--text-primary)] cursor-pointer active:scale-95 duration-200"
             >
               Sign in
-            </Link>
+            </button>
           )}
         </div>
       </div>

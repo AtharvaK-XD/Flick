@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Landing from './pages/Landing';
-import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Generate from './pages/Generate';
 import DeckView from './pages/DeckView';
@@ -23,7 +22,6 @@ export function App() {
     <Router>
       <Routes>
         <Route path="/" element={<Landing />} />
-        <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/generate" element={<Generate />} />
         <Route path="/deck/:id" element={<DeckView />} />

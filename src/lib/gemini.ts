@@ -24,7 +24,64 @@ export async function generateCards(
 ): Promise<GenerationResult> {
   const parsedCount = Number(count) || 10;
 
-  // 1. Normal mode (Supabase connected)
+  // 1. User-provided Gemini API Key (takes priority, great for testing/local key settings)
+  if (customApiKey) {
+    const prompt = `You are a flashcard generator. Given the content below, generate exactly ${parsedCount} high-quality flashcards.
+
+Rules:
+- Each flashcard must have a clear, specific question on the front
+- The answer on the back should be concise but complete (1-3 sentences max)
+- Include a one-sentence hint that gives a nudge without giving away the answer
+- Questions should test understanding, not just memorization of exact phrases
+- Do not generate duplicate or overly similar cards
+- Return ONLY valid JSON, no markdown, no explanation, no backticks
+
+Return this exact JSON structure:
+{
+  "cards": [
+    { "front": "question here", "back": "answer here", "hint": "hint here" }
+  ]
+}
+
+Content to process:
+${content.slice(0, 15000)}`;
+
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${customApiKey}`;
+    const response = await fetch(geminiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.4, maxOutputTokens: 4096 },
+      }),
+    });
+
+    if (!response.ok) {
+      let details = response.statusText;
+      try {
+        const errJson = await response.json();
+        if (errJson && errJson.error) {
+          details = errJson.error.message || JSON.stringify(errJson.error);
+        }
+      } catch (e) {
+        try {
+          const text = await response.text();
+          if (text) details = text.slice(0, 150);
+        } catch (_) {}
+      }
+      throw new Error(`Gemini API error: ${details} (${response.status})`);
+    }
+
+    const geminiData = await response.json();
+    const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+    
+    // Strip markdown formatting if any
+    const cleaned = rawText.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+    return parsed;
+  }
+
+  // 2. Normal mode (Supabase connected)
   if (!isDemoMode) {
     // Extract supabase URL from env
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
@@ -65,51 +122,6 @@ export async function generateCards(
     }
 
     return response.json();
-  }
-
-  // 2. Demo mode with User-provided Gemini API Key
-  if (customApiKey) {
-    const prompt = `You are a flashcard generator. Given the content below, generate exactly ${parsedCount} high-quality flashcards.
-
-Rules:
-- Each flashcard must have a clear, specific question on the front
-- The answer on the back should be concise but complete (1-3 sentences max)
-- Include a one-sentence hint that gives a nudge without giving away the answer
-- Questions should test understanding, not just memorization of exact phrases
-- Do not generate duplicate or overly similar cards
-- Return ONLY valid JSON, no markdown, no explanation, no backticks
-
-Return this exact JSON structure:
-{
-  "cards": [
-    { "front": "question here", "back": "answer here", "hint": "hint here" }
-  ]
-}
-
-Content to process:
-${content.slice(0, 15000)}`;
-
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${customApiKey}`;
-    const response = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.4, maxOutputTokens: 4096 },
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.statusText} (${response.status})`);
-    }
-
-    const geminiData = await response.json();
-    const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-    
-    // Strip markdown formatting if any
-    const cleaned = rawText.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(cleaned);
-    return parsed;
   }
 
   // 3. Demo mode local mock engine
