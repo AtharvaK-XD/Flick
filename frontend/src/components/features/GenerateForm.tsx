@@ -43,6 +43,7 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
   const [generationStep, setGenerationStep] = useState('');
   const [generatedCards, setGeneratedCards] = useState<Array<{ front: string; back: string; hint: string; explanation: string }>>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isExtractingPdf, setIsExtractingPdf] = useState(false);
 
   // Review phase states
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
@@ -90,8 +91,9 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
       const file = e.dataTransfer.files[0];
       if (file.type === "application/pdf") {
         setPdfFile(file);
+        setIsExtractingPdf(true);
+        setGenerationStep('Extracting PDF text...');
         try {
-          setGenerationStep('Extracting PDF text...');
           const extracted = await extractPdfText(file);
           setPdfText(extracted);
           toast(`Successfully read PDF: ${file.name}`, 'success');
@@ -99,6 +101,9 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
           console.error(err);
           toast('Failed to read PDF text. Try another PDF.', 'error');
           setPdfFile(null);
+        } finally {
+          setIsExtractingPdf(false);
+          setGenerationStep('');
         }
       } else {
         toast('Please upload only PDF files.', 'error');
@@ -110,8 +115,9 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setPdfFile(file);
+      setIsExtractingPdf(true);
+      setGenerationStep('Extracting PDF text...');
       try {
-        setGenerationStep('Extracting PDF text...');
         const extracted = await extractPdfText(file);
         setPdfText(extracted);
         toast(`Successfully read PDF: ${file.name}`, 'success');
@@ -119,6 +125,9 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
         console.error(err);
         toast('Failed to read PDF text. Try another PDF.', 'error');
         setPdfFile(null);
+      } finally {
+        setIsExtractingPdf(false);
+        setGenerationStep('');
       }
     }
   };
@@ -152,8 +161,8 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
       }
       contentToProcess = textInput;
     } else if (activeTab === 'pdf') {
-      if (!pdfText) {
-        toast('Please upload a PDF and wait for text extraction.', 'error');
+      if (!pdfText || pdfText.trim().length < 50) {
+        toast('The extracted PDF text is too short or empty (less than 50 characters). Please upload a text-rich PDF.', 'error');
         return;
       }
       contentToProcess = pdfText;
@@ -638,13 +647,13 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
                 key={tab.id}
                 type="button"
                 onClick={() => {
-                  if (isGenerating) return;
+                  if (isGenerating || isExtractingPdf) return;
                   setActiveTab(tab.id);
                 }}
                 className={cn(
                   "relative flex items-center gap-2 px-4 py-2 text-xs font-medium tracking-wide transition-colors duration-200",
                   isActive ? "text-[var(--text-primary)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
-                  isGenerating ? "opacity-50 pointer-events-none" : ""
+                  (isGenerating || isExtractingPdf) ? "opacity-50 pointer-events-none" : ""
                 )}
               >
                 <Icon size={14} />
@@ -809,9 +818,9 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
           <Button
             type="submit"
             className="w-full flex items-center justify-center gap-2 mt-4"
-            disabled={isGenerating || isSaving}
+            disabled={isGenerating || isSaving || isExtractingPdf}
           >
-            {isGenerating ? (
+            {isGenerating || isExtractingPdf ? (
               <div className="flex items-center gap-2.5">
                 <Loader />
                 <span className="text-xs font-mono tracking-wider animate-pulse">

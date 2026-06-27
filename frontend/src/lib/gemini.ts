@@ -24,6 +24,7 @@ export async function generateCards(
   customApiKey?: string
 ): Promise<GenerationResult> {
   const parsedCount = Number(count) || 10;
+  let lastError: any = null;
   
   // Decide which API key to use for client-side generation
   // 1. User-provided custom API key from settings takes priority
@@ -93,12 +94,8 @@ ${content.slice(0, 15000)}`;
       const parsed = JSON.parse(cleaned);
       return parsed;
     } catch (clientErr: any) {
-      console.warn("Client-side generation failed, checking fallback:", clientErr);
-      // If the user specified a custom key in their settings, we throw the error so they know their key is invalid/unsupported.
-      // Otherwise, we log the warning and let it fall back to the Supabase function / mock engine.
-      if (customApiKey) {
-        throw clientErr;
-      }
+      console.warn("Client-side generation failed:", clientErr);
+      lastError = clientErr;
     }
   }
 
@@ -143,10 +140,16 @@ ${content.slice(0, 15000)}`;
         const errJson = JSON.parse(errText);
         errMessage = errJson.error || errMessage;
       } catch (e) {}
-      console.warn("Supabase Edge function failed:", errMessage);
-    } catch (supabaseErr) {
-      console.warn("Supabase Edge function call failed entirely:", supabaseErr);
+      throw new Error(errMessage);
+    } catch (supabaseErr: any) {
+      console.warn("Supabase Edge function failed:", supabaseErr);
+      lastError = supabaseErr || lastError;
     }
+  }
+
+  // If there was an error and credentials were set, throw it so the user knows it failed.
+  if (lastError && (activeApiKey || !isDemoMode)) {
+    throw new Error(lastError.message || String(lastError));
   }
 
   // 3. Demo mode local mock engine / fallback

@@ -52,9 +52,32 @@ export function CardUsageProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
-  // Load and refresh usage when user changes
+  // Load and refresh usage when user changes, and subscribe to realtime updates
   useEffect(() => {
     fetchUsage();
+
+    if (!user || isDemoMode) return;
+
+    // Subscribe to realtime changes on the cards table for this user
+    const channel = supabase
+      .channel(`realtime-cards-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'cards',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          fetchUsage();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user, fetchUsage]);
 
   const refreshUsage = useCallback(async () => {

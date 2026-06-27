@@ -85,3 +85,37 @@ CREATE TRIGGER set_user_stats_updated_at
     BEFORE UPDATE ON public.user_stats
     FOR EACH ROW
     EXECUTE FUNCTION public.handle_updated_at();
+
+-- ═══════════════════════════════════════════
+-- ROW LEVEL SECURITY (RLS) POLICIES
+-- ═══════════════════════════════════════════
+
+-- Enable RLS on all tables
+ALTER TABLE public.decks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.cards ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_stats ENABLE ROW LEVEL SECURITY;
+
+-- DECKS POLICIES
+CREATE POLICY "Users can manage their own decks" 
+ON public.decks 
+FOR ALL 
+TO authenticated 
+USING (auth.uid() = user_id) 
+WITH CHECK (auth.uid() = user_id);
+
+-- CARDS POLICIES
+CREATE POLICY "Users can manage their own cards" 
+ON public.cards 
+FOR ALL 
+TO authenticated 
+USING (auth.uid() = user_id) 
+WITH CHECK (auth.uid() = user_id);
+
+-- USER_STATS POLICIES
+CREATE POLICY "Users can manage their own stats" 
+ON public.user_stats 
+FOR ALL 
+TO authenticated 
+USING (auth.uid() = user_id) 
+WITH CHECK (auth.uid() = user_id);
+
