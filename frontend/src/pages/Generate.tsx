@@ -23,7 +23,7 @@ export function Generate() {
     title: string,
     sourceType: 'text' | 'pdf' | 'url',
     sourcePreview: string,
-    cards: Array<{ front: string; back: string; hint: string }>
+    cards: Array<{ front: string; back: string; hint: string; explanation: string }>
   ) => {
     const deck = await createDeck(title, sourceType, sourcePreview, cards);
     if (deck) {

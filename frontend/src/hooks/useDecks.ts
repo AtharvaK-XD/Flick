@@ -83,7 +83,7 @@ export function useDecks(userId?: string) {
     title: string,
     sourceType: SourceType,
     sourcePreview: string,
-    cardsData: Array<{ front: string; back: string; hint: string }>
+    cardsData: Array<{ front: string; back: string; hint: string; explanation: string }>
   ): Promise<Deck | null> => {
     if (!userId) return null;
     setLoading(true);
@@ -113,6 +113,7 @@ export function useDecks(userId?: string) {
           user_id: userId,
           front: c.front,
           back: c.back,
+          explanation: c.explanation || null,
           hint: c.hint || null,
           next_review: todayStr,
           interval_days: 1,
@@ -167,6 +168,7 @@ export function useDecks(userId?: string) {
         user_id: userId,
         front: c.front,
         back: c.back,
+        explanation: c.explanation || null,
         hint: c.hint || null,
         next_review: todayStr,
       }));

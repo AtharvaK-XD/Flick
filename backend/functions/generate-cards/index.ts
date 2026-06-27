@@ -25,7 +25,8 @@ serve(async (req) => {
 
 Rules:
 - Each flashcard must have a clear, specific question on the front
-- The answer on the back should be concise but complete (1-3 sentences max)
+- The answer on the back should be concise but complete (1-2 sentences max)
+- The "explanation" should be a concise, helpful explanation (2-4 sentences max) that expands on the answer with key context
 - Include a one-sentence hint that gives a nudge without giving away the answer
 - Questions should test understanding, not just memorization of exact phrases
 - Do not generate duplicate or overly similar cards
@@ -34,7 +35,7 @@ Rules:
 Return this exact JSON structure:
 {
   "cards": [
-    { "front": "question here", "back": "answer here", "hint": "hint here" }
+    { "front": "question here", "back": "answer here", "explanation": "explanation here", "hint": "hint here" }
   ]
 }
 
@@ -46,7 +47,11 @@ ${content.slice(0, 15000)}`;
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.4, maxOutputTokens: 4096 },
+        generationConfig: { 
+          temperature: 0.4, 
+          maxOutputTokens: 8192,
+          responseMimeType: "application/json"
+        },
       }),
     });
 

@@ -36,7 +36,7 @@ export async function generateCards(
 Rules:
 - Each flashcard must have a clear, specific question on the front
 - The "back" should be a SHORT, concise answer (1-2 sentences max) — this is what appears on the card itself
-- The "explanation" should be a DETAILED, thorough explanation (3-6 sentences) that expands on the answer with context, examples, and deeper insight — this is shown separately as a study aid
+- The "explanation" should be a concise, helpful explanation (2-4 sentences max) that expands on the answer with key context — this is shown separately as a study aid
 - Include a one-sentence hint that gives a nudge without giving away the answer
 - Questions should test understanding, not just memorization of exact phrases
 - Do not generate duplicate or overly similar cards
@@ -61,7 +61,11 @@ ${content.slice(0, 15000)}`;
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.4, maxOutputTokens: 4096 },
+          generationConfig: { 
+            temperature: 0.4, 
+            maxOutputTokens: 8192,
+            responseMimeType: "application/json"
+          },
         }),
       });
 

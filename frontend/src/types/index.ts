@@ -17,6 +17,7 @@ export interface Card {
   user_id: string;
   front: string;
   back: string;
+  explanation: string | null;
   hint: string | null;
   next_review: string; // ISO date string (YYYY-MM-DD)
   interval_days: number;
