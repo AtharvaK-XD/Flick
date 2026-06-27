@@ -4,7 +4,7 @@ import { FlipCard } from '../ui/FlipCard';
 import Button from '../ui/Button';
 import { CheckCircle, Sparkles, ArrowLeft, Zap } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface StudyModeProps {
   deckTitle: string;
@@ -157,14 +157,27 @@ export function StudyMode({
       {/* Center Study Arena */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-8">
         {!isFinished ? (
-          <div className="w-full flex flex-col items-center gap-6">
-            <FlipCard
-              front={currentCard.front}
-              back={currentCard.back}
-              hint={currentCard.hint}
-              isFlipped={isFlipped}
-              onFlip={() => setIsFlipped(!isFlipped)}
-            />
+          <div className="w-full flex flex-col items-center gap-6 overflow-hidden">
+            <div className="w-full flex justify-center py-2">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentIndex}
+                  initial={{ opacity: 0, x: 50, scale: 0.98 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: -50, scale: 0.98 }}
+                  transition={{ type: "spring", stiffness: 350, damping: 28 }}
+                  className="w-full flex justify-center"
+                >
+                  <FlipCard
+                    front={currentCard.front}
+                    back={currentCard.back}
+                    hint={currentCard.hint}
+                    isFlipped={isFlipped}
+                    onFlip={() => setIsFlipped(!isFlipped)}
+                  />
+                </motion.div>
+              </AnimatePresence>
+            </div>
 
             {!isFlipped ? (
               <p className="text-xs text-[var(--text-secondary)] font-mono animate-pulse mt-2">

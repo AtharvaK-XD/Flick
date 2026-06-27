@@ -3,11 +3,27 @@ import { Card3D } from '../ui/Card3D';
 import type { Deck, Card } from '../../types';
 import { truncateText } from '../../lib/utils';
 import { BookOpen, ArrowRight } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface DeckGridProps {
   decks: Deck[];
   allCards: Card[];
 }
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.04
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 15 },
+  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
+};
 
 export function DeckGrid({ decks, allCards }: DeckGridProps) {
   const navigate = useNavigate();
@@ -57,17 +73,22 @@ export function DeckGrid({ decks, allCards }: DeckGridProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 text-left">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 text-left"
+    >
       {decks.map((deck) => {
         const { dueCount, masteryPercentage } = getDeckMetrics(deck.id, deck.card_count);
         
         return (
-          <Card3D
-            key={deck.id}
-            maxRotation={6}
-            onClick={() => navigate(`/deck/${deck.id}`)}
-            className="group cursor-pointer bg-surface border border-[var(--border)] hover:border-purple-500/25 rounded-xl p-5 flex flex-col justify-between h-[180px] relative overflow-hidden transition-all duration-500 shadow-sm hover:shadow-[0_0_20px_rgba(124,58,237,0.06)]"
-          >
+          <motion.div key={deck.id} variants={itemVariants}>
+            <Card3D
+              maxRotation={6}
+              onClick={() => navigate(`/deck/${deck.id}`)}
+              className="group cursor-pointer bg-surface border border-[var(--border)] hover:border-purple-500/25 rounded-xl p-5 flex flex-col justify-between h-[180px] relative overflow-hidden transition-all duration-500 shadow-sm hover:shadow-[0_0_20px_rgba(124,58,237,0.06)]"
+            >
             {/* Top Row */}
             <div className="flex justify-between items-start gap-4">
               <div className="flex-1 min-w-0">
@@ -126,10 +147,11 @@ export function DeckGrid({ decks, allCards }: DeckGridProps) {
               </div>
             </div>
           </Card3D>
-        );
-      })}
-    </div>
-  );
+        </motion.div>
+      );
+    })}
+  </motion.div>
+);
 }
 
 export default DeckGrid;

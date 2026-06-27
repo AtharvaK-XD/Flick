@@ -33,7 +33,7 @@ export function FlipCard({
   return (
     <div 
       className={cn(
-        "w-full max-w-[500px] h-[320px] md:max-w-[620px] md:h-[380px] lg:max-w-[700px] lg:h-[420px] cursor-pointer perspective-1200", 
+        "w-full max-w-[500px] h-[320px] md:max-w-[620px] md:h-[380px] lg:max-w-[700px] lg:h-[420px] cursor-pointer perspective-1200 hover:scale-[1.012] transition-all duration-300 ease-out", 
         className
       )}
       onClick={handleFlipClick}
