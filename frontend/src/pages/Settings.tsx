@@ -161,7 +161,7 @@ export function Settings() {
                     />
                   </div>
                   <p className="text-[10px] text-[var(--text-muted)] italic">
-                    Free tier accounts are limited to 100 generated flashcards overall. Delete decks to reclaim space.
+                    Accounts are limited to 100 generated flashcards every 12 hours. Your limit resets automatically in real time.
                   </p>
                 </div>
               </div>

@@ -19,7 +19,7 @@ interface GenerateFormProps {
 
 export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
   const { toast } = useToast();
-  const { cardsUsed, limit, percentageLeft, refreshUsage } = useCardUsage();
+  const { cardsUsed, limit, percentageLeft, refreshUsage, resetTime } = useCardUsage();
   
   // Phase: 'input' | 'review'
   const [phase, setPhase] = useState<'input' | 'review'>('input');
@@ -144,11 +144,29 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
     
     // Check flashcard limit
     if (cardsUsed >= limit) {
-      toast('You have reached the limit of 100 flashcards. Please delete some decks in settings or dashboard to generate more.', 'error');
+      let resetMsg = 'Please try again in 12 hours.';
+      if (resetTime) {
+        const diffMs = new Date(resetTime).getTime() - Date.now();
+        if (diffMs > 0) {
+          const hours = Math.floor(diffMs / (1000 * 60 * 60));
+          const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+          resetMsg = `Please try again after ${hours}h ${minutes}m.`;
+        }
+      }
+      toast(`You have reached the limit of 100 generated flashcards. ${resetMsg}`, 'error');
       return;
     }
     if (cardsUsed + cardCount > limit) {
-      toast(`You only have ${limit - cardsUsed} cards remaining in your limit, but requested ${cardCount}. Please select a smaller count or delete some decks.`, 'error');
+      let resetMsg = 'Please wait for your limit to reset or request fewer cards.';
+      if (resetTime) {
+        const diffMs = new Date(resetTime).getTime() - Date.now();
+        if (diffMs > 0) {
+          const hours = Math.floor(diffMs / (1000 * 60 * 60));
+          const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+          resetMsg = `Your limit will begin to reset in ${hours}h ${minutes}m.`;
+        }
+      }
+      toast(`You only have ${limit - cardsUsed} cards remaining in your 12-hour limit, but requested ${cardCount}. ${resetMsg}`, 'error');
       return;
     }
 
@@ -609,10 +627,10 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
       <div className="mb-6 bg-white/[0.02] border border-white/5 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-0.5 text-left">
           <p className="text-xs font-semibold text-[var(--text-primary)]">
-            Flashcard Limit Usage
+            Flashcard Limit Usage (12h rolling)
           </p>
           <p className="text-[10px] text-[var(--text-secondary)]">
-            You have generated {cardsUsed} out of {limit} maximum cards.
+            You have generated {cardsUsed} out of {limit} maximum cards in the last 12 hours.
           </p>
         </div>
         <div className="flex items-center gap-3 w-full sm:w-auto">
