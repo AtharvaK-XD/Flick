@@ -1,0 +1,120 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0C0C0E;
+  --surface: #161618;
+  --surface-2: #1E1E22;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-hover: rgba(255, 255, 255, 0.14);
+  --text-primary: #F2F2F3;
+  --text-secondary: #8A8A96;
+  --text-muted: #4A4A56;
+  --accent: #7C3AED;
+  --accent-hover: #6D28D9;
+  --accent-light: rgba(124, 58, 237, 0.12);
+  --success: #10B981;
+  --danger: #F43F5E;
+  --warning: #F59E0B;
+  --dot-color: rgba(255, 255, 255, 0.035);
+}
+
+/* Light mode overrides */
+.light {
+  --bg: #FAFAFA;
+  --surface: #FFFFFF;
+  --surface-2: #F1F1F4;
+  --border: rgba(0, 0, 0, 0.08);
+  --border-hover: rgba(0, 0, 0, 0.15);
+  --text-primary: #18181B;
+  --text-secondary: #52525B;
+  --text-muted: #8E8E9F;
+  --accent: #7C3AED;
+  --accent-hover: #6D28D9;
+  --accent-light: rgba(124, 58, 237, 0.08);
+  --success: #059669;
+  --danger: #E11D48;
+  --warning: #D97706;
+  --dot-color: rgba(0, 0, 0, 0.025);
+}
+
+body {
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--dot-color) 1.2px, transparent 1.2px);
+  background-size: 24px 24px;
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease, background-image 0.3s ease;
+  margin: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Custom scrollbars for premium feel */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-hover);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Custom styles for 3D tilt perspective */
+.perspective-1200 {
+  perspective: 1200px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+/* ── Theme-aware utility classes ── */
+/* Use these instead of hardcoded hex colors so light mode works */
+
+.bg-app       { background-color: var(--bg); }
+.bg-surface   { background-color: var(--surface); }
+.bg-surface-2 { background-color: var(--surface-2); }
+
+.border-theme { border-color: var(--border); }
+.border-theme-hover:hover { border-color: var(--border-hover); }
+
+/* Input / textarea / select shared style */
+.input-theme {
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: 0.5rem;
+  transition: border-color 0.15s;
+}
+.input-theme::placeholder { color: var(--text-muted); }
+.input-theme:focus { outline: none; border-color: rgba(124, 58, 237, 0.5); }
+
+/* Card surface */
+.card-surface {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+}
+
+/* Light mode: fix white/black opacity borders */
+.light .border-white\/5  { border-color: var(--border) !important; }
+.light .border-white\/10 { border-color: var(--border-hover) !important; }
+.light .divide-white\/5 > * + * { border-color: var(--border) !important; }
