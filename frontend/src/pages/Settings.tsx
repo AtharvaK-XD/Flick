@@ -17,6 +17,8 @@ export function Settings() {
   // Custom API key states
   const [apiKey, setApiKey] = useState('');
   const [isSavingKey, setIsSavingKey] = useState(false);
+  const [groqApiKey, setGroqApiKey] = useState('');
+  const [isSavingGroqKey, setIsSavingGroqKey] = useState(false);
 
   // Dark/Light Theme state
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
@@ -32,6 +34,9 @@ export function Settings() {
   useEffect(() => {
     const savedKey = localStorage.getItem('flick_custom_gemini_key') || '';
     setApiKey(savedKey);
+
+    const savedGroqKey = localStorage.getItem('flick_custom_groq_key') || '';
+    setGroqApiKey(savedGroqKey);
 
     const savedTheme = (localStorage.getItem('flick_theme') as 'dark' | 'light') || 'dark';
     setTheme(savedTheme);
@@ -70,6 +75,26 @@ export function Settings() {
     toast('API Key removed.', 'info');
   };
 
+  // Handle Save Groq API Key
+  const handleSaveGroqApiKey = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingGroqKey(true);
+    try {
+      localStorage.setItem('flick_custom_groq_key', groqApiKey.trim());
+      toast('Groq API Key saved successfully!', 'success');
+    } catch (err) {
+      toast('Failed to save Groq API key.', 'error');
+    } finally {
+      setIsSavingGroqKey(false);
+    }
+  };
+
+  const handleClearGroqApiKey = () => {
+    setGroqApiKey('');
+    localStorage.removeItem('flick_custom_groq_key');
+    toast('Groq API Key removed.', 'info');
+  };
+
   // Danger zone wipe
   const handleDeleteAllData = async () => {
     const doubleConfirm = window.confirm(
@@ -105,8 +130,8 @@ export function Settings() {
         </div>
 
         <div className="flex flex-col gap-6 w-full">
-          {/* Row 1: Profile & API Key */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+          {/* Row 1: Profile & API Keys */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
             {/* 1. Profile Section */}
             {user ? (
               <div className="bg-surface border border-[var(--border)] rounded-xl p-6 flex flex-col justify-between">
@@ -169,7 +194,7 @@ export function Settings() {
               <div className="bg-surface border border-[var(--border)] rounded-xl p-6" />
             )}
 
-            {/* 2. Custom API Key Section */}
+            {/* 2. Custom Gemini API Key Section */}
             <div className="bg-surface border border-[var(--border)] rounded-xl p-6 flex flex-col justify-between">
               <div className="space-y-4">
                 <div className="space-y-1">
@@ -189,7 +214,7 @@ export function Settings() {
                       value={apiKey}
                       onChange={(e) => setApiKey(e.target.value)}
                       placeholder="AIzaSy..."
-                      className="input-theme px-4 py-2.5 text-xs placeholder-[var(--text-muted)] font-mono w-full"
+                      className="input-theme px-4 py-2.5 text-xs placeholder-[var(--text-muted)] font-mono w-full text-[var(--text-primary)]"
                     />
                     <span className="text-[10px] text-[var(--text-muted)]">
                       Get a free key from <a href="https://aistudio.google.com" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">Google AI Studio</a>.
@@ -212,6 +237,57 @@ export function Settings() {
                       variant="secondary"
                       size="sm"
                       loading={isSavingKey}
+                    >
+                      Save Key
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            {/* 3. Custom Groq API Key Section */}
+            <div className="bg-surface border border-[var(--border)] rounded-xl p-6 flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <h2 className="text-sm font-semibold tracking-tight text-[var(--text-primary)] flex items-center gap-2">
+                    <Key size={15} />
+                    <span>Groq API Key</span>
+                  </h2>
+                  <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                    Optional. Input your personal Groq API key to override rate limits or generate cards at ultra-high speeds. Kept locally in browser memory.
+                  </p>
+                </div>
+
+                <form onSubmit={handleSaveGroqApiKey} className="space-y-4 pt-2">
+                  <div className="flex flex-col gap-2">
+                    <input
+                      type="password"
+                      value={groqApiKey}
+                      onChange={(e) => setGroqApiKey(e.target.value)}
+                      placeholder="gsk_..."
+                      className="input-theme px-4 py-2.5 text-xs placeholder-[var(--text-muted)] font-mono w-full text-[var(--text-primary)]"
+                    />
+                    <span className="text-[10px] text-[var(--text-muted)]">
+                      Get a free key from <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">Groq Console</a>.
+                    </span>
+                  </div>
+
+                  <div className="flex gap-2 justify-end">
+                    {localStorage.getItem('flick_custom_groq_key') && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleClearGroqApiKey}
+                      >
+                        Clear Key
+                      </Button>
+                    )}
+                    <Button
+                      type="submit"
+                      variant="secondary"
+                      size="sm"
+                      loading={isSavingGroqKey}
                     >
                       Save Key
                     </Button>
