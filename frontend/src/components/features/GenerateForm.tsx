@@ -25,7 +25,7 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
   const [phase, setPhase] = useState<'input' | 'review'>('input');
   
   // Tabs: 'text' | 'pdf' | 'url'
-  const [activeTab, setActiveTab] = useState<'text' | 'pdf' | 'url'>('text');
+  const [activeTab, setActiveTab] = useState<'text' | 'pdf' | 'url'>('pdf');
   
   // Title & Card Count
   const [title, setTitle] = useState('');
@@ -326,9 +326,9 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
   // (3D tilt removed — was causing hover lag on flashcard click)
 
   const tabOptions = [
-    { id: 'text', label: 'Text', icon: FileText },
     { id: 'pdf', label: 'PDF', icon: Upload },
     { id: 'url', label: 'URL', icon: Link2 },
+    { id: 'text', label: 'Text', icon: FileText },
   ] as const;
 
   const currentCard = generatedCards[currentCardIndex];
