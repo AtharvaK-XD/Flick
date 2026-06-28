@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, Link2, FileText, X, Sparkles, Check, ArrowLeft, ChevronLeft, ChevronRight, ThumbsUp, ThumbsDown, HelpCircle, RotateCcw } from 'lucide-react';
+import { Upload, Link2, FileText, X, Sparkles, Check, ArrowLeft, ChevronLeft, ChevronRight, ThumbsUp, ThumbsDown, HelpCircle, RotateCcw, Key } from 'lucide-react';
 import { generateCards, inferTitle } from '../../lib/gemini';
 import Button from '../ui/Button';
 import Loader from '../ui/Loader';
@@ -44,6 +44,9 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
   const [generatedCards, setGeneratedCards] = useState<Array<{ front: string; back: string; hint: string; explanation: string }>>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isExtractingPdf, setIsExtractingPdf] = useState(false);
+  const [isQuotaExceeded, setIsQuotaExceeded] = useState(false);
+  const [tempApiKey, setTempApiKey] = useState('');
+  const [lastContent, setLastContent] = useState('');
 
   // Review phase states
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
@@ -204,6 +207,11 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
       }
     }
 
+    setLastContent(contentToProcess);
+    await triggerGenerate(contentToProcess);
+  };
+
+  const triggerGenerate = async (contentToProcess: string) => {
     setIsGenerating(true);
     setGeneratedCards([]);
 
@@ -233,11 +241,37 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
       }
     } catch (err: any) {
       console.error(err);
-      toast(err.message || 'Failed to generate cards.', 'error');
+      
+      const errMsg = err.message || String(err);
+      const isQuotaError = 
+        errMsg.toLowerCase().includes('quota') || 
+        errMsg.includes('429');
+        
+      if (isQuotaError) {
+        setIsQuotaExceeded(true);
+        toast('Gemini API quota reached. Please configure a custom key to continue.', 'error');
+      } else {
+        toast(errMsg || 'Failed to generate cards.', 'error');
+      }
     } finally {
       setIsGenerating(false);
       setGenerationStep('');
     }
+  };
+
+  const handleSaveQuotaKey = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!tempApiKey.trim()) {
+      toast('Please enter a valid API key.', 'error');
+      return;
+    }
+    
+    localStorage.setItem('flick_custom_gemini_key', tempApiKey.trim());
+    setIsQuotaExceeded(false);
+    toast('API Key saved successfully! Retrying card generation...', 'success');
+    
+    // Retrigger generation with preserved content
+    await triggerGenerate(lastContent);
   };
 
   const handleSave = async () => {
@@ -615,6 +649,90 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
           </div>
 
         </div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════
+  // QUOTA EXCEEDED PHASE
+  // ═══════════════════════════════════════════
+  if (isQuotaExceeded) {
+    return (
+      <div className="w-full flex justify-center py-8">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-surface border border-purple-500/20 p-8 rounded-xl max-w-xl w-full text-left space-y-6 shadow-2xl relative overflow-hidden"
+        >
+          {/* Subtle background glow */}
+          <div className="absolute -top-24 -right-24 w-48 h-48 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+          
+          {/* Icon & Heading */}
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 shrink-0">
+              <Key size={22} className="animate-pulse" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-[var(--text-primary)]">Gemini API Quota Reached</h2>
+              <p className="text-xs text-[var(--text-secondary)] mt-0.5">The shared generation limit has been exceeded.</p>
+            </div>
+          </div>
+
+          <div className="h-px bg-white/5" />
+
+          {/* Description */}
+          <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+            Due to high traffic, Flick's shared Google Gemini API key has hit its free-tier rate limit. 
+            To generate your flashcards right now, please paste your personal Gemini API key. It will be saved locally in your browser.
+          </p>
+
+          {/* Input Form */}
+          <form onSubmit={handleSaveQuotaKey} className="space-y-4 pt-1">
+            <div className="space-y-2">
+              <label className="text-[10px] font-mono text-[var(--text-muted)] uppercase tracking-wider block">
+                Your Gemini API Key
+              </label>
+              <input
+                type="password"
+                value={tempApiKey}
+                onChange={(e) => setTempApiKey(e.target.value)}
+                placeholder="AIzaSy..."
+                className="input-theme w-full px-4 py-3 text-xs placeholder-[var(--text-muted)] font-mono"
+                required
+              />
+              <p className="text-[10px] text-[var(--text-muted)] leading-relaxed">
+                Don't have a key? You can get a free, personal key in 30 seconds from{' '}
+                <a 
+                  href="https://aistudio.google.com" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-purple-400 hover:text-purple-300 font-semibold underline"
+                >
+                  Google AI Studio
+                </a>.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setIsQuotaExceeded(false)}
+                className="flex-1 py-2.5 text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                className="flex-1 py-2.5 text-xs flex items-center justify-center gap-1.5"
+              >
+                <Sparkles size={13} />
+                <span>Save &amp; Generate</span>
+              </Button>
+            </div>
+          </form>
+        </motion.div>
       </div>
     );
   }

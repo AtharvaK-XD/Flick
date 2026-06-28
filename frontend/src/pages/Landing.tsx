@@ -67,7 +67,7 @@ export function Landing() {
               <span className="font-light text-[var(--text-secondary)] select-none">
                 Your notes.
               </span>
-              <span className="font-medium text-white ml-6 md:ml-12 mt-1 select-none">
+              <span className="font-medium text-white mt-2 select-none">
                 Finally useful.
               </span>
             </h1>
