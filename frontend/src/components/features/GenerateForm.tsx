@@ -997,8 +997,8 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
                 >
                   <optgroup label="Google Gemini" className="bg-surface text-[var(--text-primary)]">
                     <option value="gemini-2.5-flash">Gemini 2.5 Flash ⚡️ (Fast, Default)</option>
-                    <option value="gemini-1.5-pro">Gemini 1.5 Pro 🧠 (Deep Reason)</option>
-                    <option value="gemini-1.5-flash">Gemini 1.5 Flash 🔄 (Stable)</option>
+                    <option value="gemini-2.5-pro">Gemini 2.5 Pro 🧠 (Deep Reason)</option>
+                    <option value="gemini-2.0-flash">Gemini 2.0 Flash 🔄 (Stable)</option>
                   </optgroup>
                   <optgroup label="Groq AI (Ultra Fast)" className="bg-surface text-[var(--text-primary)]">
                     <option value="llama-3.1-70b-versatile">Llama 3.1 70B 🦙 (Advanced)</option>
