@@ -58,7 +58,7 @@ export function Navbar() {
         </Link>
 
         {/* Navigation / User controls */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-3 sm:gap-6">
           {user ? (
             <>
               {/* Desktop links */}
@@ -107,9 +107,9 @@ export function Navbar() {
               )}
 
               {/* Card Limit Badge with premium popup tooltip */}
-              <div className="relative group flex items-center">
-                <div className="flex items-center gap-2.5 bg-white/[0.03] border border-white/5 hover:border-purple-500/20 px-3 py-1.5 rounded-full cursor-help transition-all duration-300">
-                  <div className="w-12 h-1.5 bg-white/10 rounded-full overflow-hidden">
+              <div className="relative group flex items-center shrink-0">
+                <div className="flex items-center gap-1.5 sm:gap-2.5 bg-white/[0.03] border border-white/5 hover:border-purple-500/20 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full cursor-help transition-all duration-300">
+                  <div className="w-8 sm:w-12 h-1 sm:h-1.5 bg-white/10 rounded-full overflow-hidden">
                     <div
                       className={cn(
                         "h-full rounded-full transition-all duration-500",
@@ -122,7 +122,7 @@ export function Navbar() {
                       style={{ width: `${100 - percentageLeft}%` }}
                     />
                   </div>
-                  <span className="text-[11px] font-mono font-medium text-[var(--text-secondary)] whitespace-nowrap">
+                  <span className="text-[10px] sm:text-[11px] font-mono font-medium text-[var(--text-secondary)] whitespace-nowrap">
                     <span className="text-[var(--text-primary)] font-bold">{percentageLeft}%</span> left
                   </span>
                 </div>
@@ -158,7 +158,7 @@ export function Navbar() {
               </div>
 
               {/* User profile details */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <div className="flex flex-col text-right hidden sm:block">
                   <span className="text-sm font-medium text-[var(--text-primary)]">
                     {user.name}

@@ -433,7 +433,7 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
         <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
 
           {/* LEFT: Question + Explanation + Controls */}
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-5 order-2 lg:order-1">
             <p className="text-[10px] font-mono text-purple-400/70 uppercase tracking-[0.15em]">
               {title || 'Untitled Deck'} · Card {currentCardIndex + 1}
             </p>
@@ -587,7 +587,7 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
           </div>
 
           {/* RIGHT: Large Flip Card */}
-          <div className="flex items-start justify-center">
+          <div className="flex items-start justify-center order-1 lg:order-2">
             <div
               ref={reviewCardRef}
               onClick={() => { setIsFlipped(f => !f); setShowHint(false); }}
