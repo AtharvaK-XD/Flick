@@ -49,6 +49,19 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
   const [lastContent, setLastContent] = useState('');
   const [selectedModel, setSelectedModel] = useState<string>('gemini-2.5-flash');
 
+  // Helper to identify models with 15 card limit
+  const isModelLimited = (modelId: string) => {
+    return modelId === 'llama-3.1-8b-instant' || modelId === 'gemma-2-9b-it';
+  };
+
+  // Adjust card count if model changes to a limited model
+  useEffect(() => {
+    if (cardCount === 20 && isModelLimited(selectedModel)) {
+      setCardCount(15);
+      toast('Selected model supports a maximum of 15 cards. Count adjusted.', 'info');
+    }
+  }, [selectedModel, cardCount, toast]);
+
   // Review phase states
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -940,15 +953,20 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
               <div className="flex items-center gap-2 bg-app border border-[var(--border)] rounded-lg p-1 relative">
                 {[5, 10, 15, 20].map((num) => {
                   const isActive = cardCount === num;
+                  const isDisabled = num === 20 && isModelLimited(selectedModel);
                   return (
                     <button
                       key={num}
                       type="button"
+                      disabled={isDisabled}
                       onClick={() => setCardCount(num)}
+                      title={isDisabled ? "This model supports a maximum of 15 cards" : undefined}
                       className={cn(
-                        "relative flex-1 py-1.5 text-xs font-medium rounded-md transition-colors duration-200 z-10 focus:outline-none",
+                        "relative flex-1 py-1.5 text-xs font-medium rounded-md transition-all duration-200 z-10 focus:outline-none",
                         isActive
                           ? "text-white"
+                          : isDisabled
+                          ? "text-[var(--text-muted)] opacity-30 cursor-not-allowed"
                           : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                       )}
                     >
