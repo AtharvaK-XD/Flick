@@ -149,7 +149,7 @@ ${content.slice(0, 15000)}`;
   }
 
   // 2. Normal mode (Supabase connected)
-  if (!isDemoMode) {
+  if (!isDemoMode && !customApiKey) {
     try {
       // Extract supabase URL from env
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';

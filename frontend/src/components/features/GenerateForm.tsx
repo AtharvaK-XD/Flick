@@ -230,7 +230,7 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
     setGeneratedCards([]);
 
     try {
-      const isGroq = selectedModel.startsWith('llama-') || selectedModel.startsWith('gemma-');
+      const isGroq = !selectedModel.startsWith('gemini-');
       setGenerationStep(isGroq ? 'Asking Groq AI...' : 'Asking Gemini AI...');
       
       const customKey = isGroq
@@ -269,7 +269,7 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
         
       if (isQuotaError) {
         setIsQuotaExceeded(true);
-        const isGroq = selectedModel.startsWith('llama-') || selectedModel.startsWith('gemma-');
+        const isGroq = !selectedModel.startsWith('gemini-');
         toast(`${isGroq ? 'Groq' : 'Gemini'} API quota reached. Please configure a custom key to continue.`, 'error');
       } else {
         toast(errMsg || 'Failed to generate cards.', 'error');
@@ -287,7 +287,7 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
       return;
     }
     
-    const isGroq = selectedModel.startsWith('llama-') || selectedModel.startsWith('gemma-');
+    const isGroq = !selectedModel.startsWith('gemini-');
     const storageKey = isGroq ? 'flick_custom_groq_key' : 'flick_custom_gemini_key';
     
     localStorage.setItem(storageKey, tempApiKey.trim());
