@@ -128,7 +128,7 @@ export function Navbar() {
                 </div>
 
                 {/* Popup Tooltip - Wider, larger font, clearer hierarchy */}
-                <div className="absolute top-[calc(100%+10px)] right-0 w-80 p-5 rounded-xl bg-surface border border-[var(--border)] shadow-2xl opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 pointer-events-none z-50 flex flex-col gap-3.5 text-left">
+                <div className="absolute top-[calc(100%+10px)] right-0 w-80 p-5 rounded-xl bg-surface border border-[var(--border)] shadow-2xl opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 pointer-events-none z-50 flex-col gap-3.5 text-left hidden sm:flex">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider">Remaining Limit</span>
                     <span className="text-sm font-mono font-bold text-purple-400">{limit - cardsUsed} cards</span>

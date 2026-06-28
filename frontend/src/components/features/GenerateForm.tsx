@@ -782,7 +782,7 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
           </p>
         </div>
         <div className="flex items-center gap-3 w-full sm:w-auto">
-          <div className="w-full sm:w-36 h-1.5 bg-app border border-[var(--border)] rounded-full overflow-hidden shrink-0">
+          <div className="flex-1 sm:w-36 sm:shrink-0 h-1.5 bg-app border border-[var(--border)] rounded-full overflow-hidden">
             <div
               className={cn(
                 "h-full rounded-full transition-all duration-500",
@@ -817,7 +817,7 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
                   setActiveTab(tab.id);
                 }}
                 className={cn(
-                  "relative flex items-center gap-2 px-4 py-2 text-xs font-medium tracking-wide transition-colors duration-200",
+                  "relative flex items-center gap-1.5 sm:gap-2 px-2.5 py-2 sm:px-4 text-xs font-medium tracking-wide transition-colors duration-200",
                   isActive ? "text-[var(--text-primary)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                   (isGenerating || isExtractingPdf) ? "opacity-50 pointer-events-none" : ""
                 )}
