@@ -51,7 +51,7 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
 
   // Helper to identify models with 15 card limit
   const isModelLimited = (modelId: string) => {
-    return modelId === 'llama-3.1-8b-instant' || modelId === 'gemma-2-9b-it';
+    return modelId === 'llama-3.1-8b-instant';
   };
 
   // Adjust card count if model changes to a limited model
@@ -1001,9 +1001,9 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
                     <option value="gemini-2.0-flash">Gemini 2.0 Flash 🔄 (Stable)</option>
                   </optgroup>
                   <optgroup label="Groq AI (Ultra Fast)" className="bg-surface text-[var(--text-primary)]">
-                    <option value="llama-3.1-70b-versatile">Llama 3.1 70B 🦙 (Advanced)</option>
+                    <option value="llama-3.3-70b-versatile">Llama 3.3 70B 🦙 (Advanced)</option>
                     <option value="llama-3.1-8b-instant">Llama 3.1 8B 🚀 (Instant Speed)</option>
-                    <option value="gemma-2-9b-it">Gemma 2 9B 💎 (High Precision)</option>
+                    <option value="qwen/qwen3-32b">Qwen3 32B 💎 (High Precision)</option>
                   </optgroup>
                 </select>
               </div>

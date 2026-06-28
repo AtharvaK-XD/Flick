@@ -27,7 +27,7 @@ export async function generateCards(
   const parsedCount = Number(count) || 10;
   let lastError: any = null;
   
-  const isGroq = model.startsWith('llama-') || model.startsWith('gemma-');
+  const isGroq = !model.startsWith('gemini-');
   
   // Decide which API key to use for client-side generation
   // 1. User-provided custom API key from settings takes priority
