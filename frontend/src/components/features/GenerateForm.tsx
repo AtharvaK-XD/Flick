@@ -19,7 +19,7 @@ interface GenerateFormProps {
 
 export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
   const { toast } = useToast();
-  const { cardsUsed, limit, percentageLeft, refreshUsage, resetTime } = useCardUsage();
+  const { cardsUsed, limit, percentageLeft, refreshUsage, resetTime, recordGeneration } = useCardUsage();
   
   // Phase: 'input' | 'review'
   const [phase, setPhase] = useState<'input' | 'review'>('input');
@@ -214,6 +214,7 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
       const result = await generateCards(contentToProcess, cardCount, customKey);
       
       if (result.cards && result.cards.length > 0) {
+        recordGeneration(result.cards.length);
         setGeneratedCards(result.cards);
         if (!title.trim()) {
           const inferred = result.title || inferTitle(contentToProcess);

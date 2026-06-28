@@ -10,6 +10,7 @@ export interface CardUsageContextType {
   refreshUsage: () => Promise<void>;
   canGenerate: (requestedCount: number) => boolean;
   resetTime: string | null;
+  recordGeneration: (count: number) => void;
 }
 
 const LIMIT = 100;
@@ -32,60 +33,93 @@ export function CardUsageProvider({ children }: { children: React.ReactNode }) {
 
     setLoading(true);
     try {
-      const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
+      const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).getTime();
+      const initKey = `flick_generation_history_init_${user.id}`;
+      const historyKey = `flick_generation_history_${user.id}`;
+      const isInitialized = localStorage.getItem(initKey) === 'true';
 
-      if (isDemoMode) {
-        // Demo Mode - count from LocalStorage in last 12 hours
-        const storedCards = localStorage.getItem('flick_demo_cards') || '[]';
-        const parsedCards = JSON.parse(storedCards);
-        const userCards = parsedCards.filter((c: any) => c.user_id === user.id && c.created_at >= twelveHoursAgo);
-        const countUsed = userCards.length;
-        setCardsUsed(countUsed);
-
-        if (countUsed >= LIMIT) {
-          const sorted = [...userCards].sort((a: any, b: any) => a.created_at.localeCompare(b.created_at));
-          if (sorted.length > 0) {
-            const oldestTime = new Date(sorted[0].created_at).getTime();
-            const resetTimestamp = oldestTime + 12 * 60 * 60 * 1000;
-            setResetTime(new Date(resetTimestamp).toISOString());
-          } else {
-            setResetTime(null);
+      // 1. Initial seed from database / localStorage saved cards if first time
+      if (!isInitialized) {
+        let initialCount = 0;
+        let oldestTime = new Date().toISOString();
+        
+        if (isDemoMode) {
+          const storedCards = localStorage.getItem('flick_demo_cards') || '[]';
+          let parsedCards = [];
+          try { parsedCards = JSON.parse(storedCards); } catch(e){}
+          const userCards = parsedCards.filter((c: any) => c.user_id === user.id && c.created_at >= new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString());
+          initialCount = userCards.length;
+          if (userCards.length > 0) {
+            const sorted = [...userCards].sort((a: any, b: any) => a.created_at.localeCompare(b.created_at));
+            oldestTime = sorted[0].created_at;
           }
+        } else {
+          const twelveHoursAgoStr = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
+          const { count, error } = await supabase
+            .from('cards')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .gte('created_at', twelveHoursAgoStr);
+          
+          if (!error && count) {
+            initialCount = count;
+            const { data } = await supabase
+              .from('cards')
+              .select('created_at')
+              .eq('user_id', user.id)
+              .gte('created_at', twelveHoursAgoStr)
+              .order('created_at', { ascending: true })
+              .limit(1)
+              .maybeSingle();
+            if (data) {
+              oldestTime = data.created_at;
+            }
+          }
+        }
+
+        const initialHistory = [];
+        if (initialCount > 0) {
+          initialHistory.push({
+            count: initialCount,
+            timestamp: oldestTime
+          });
+        }
+        localStorage.setItem(historyKey, JSON.stringify(initialHistory));
+        localStorage.setItem(initKey, 'true');
+      }
+
+      // 2. Read history and calculate total cards generated in last 12 hours
+      const stored = localStorage.getItem(historyKey) || '[]';
+      let history = [];
+      try {
+        history = JSON.parse(stored);
+      } catch (e) {
+        history = [];
+      }
+
+      const activeRecords = history.filter((r: any) => {
+        const time = new Date(r.timestamp).getTime();
+        return time >= twelveHoursAgo;
+      });
+
+      if (activeRecords.length < history.length) {
+        localStorage.setItem(historyKey, JSON.stringify(activeRecords));
+      }
+
+      const countUsed = activeRecords.reduce((sum: number, r: any) => sum + (Number(r.count) || 0), 0);
+      setCardsUsed(countUsed);
+
+      if (countUsed >= LIMIT) {
+        const sorted = [...activeRecords].sort((a: any, b: any) => a.timestamp.localeCompare(b.timestamp));
+        if (sorted.length > 0) {
+          const oldestTime = new Date(sorted[0].timestamp).getTime();
+          const resetTimestamp = oldestTime + 12 * 60 * 60 * 1000;
+          setResetTime(new Date(resetTimestamp).toISOString());
         } else {
           setResetTime(null);
         }
       } else {
-        // Supabase Mode - query cards created in the last 12 hours
-        const { count, error } = await supabase
-          .from('cards')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-          .gte('created_at', twelveHoursAgo);
-
-        if (error) throw error;
-        const countUsed = count || 0;
-        setCardsUsed(countUsed);
-
-        if (countUsed >= LIMIT) {
-          const { data, error: oldestError } = await supabase
-            .from('cards')
-            .select('created_at')
-            .eq('user_id', user.id)
-            .gte('created_at', twelveHoursAgo)
-            .order('created_at', { ascending: true })
-            .limit(1)
-            .maybeSingle();
-
-          if (!oldestError && data) {
-            const oldestTime = new Date(data.created_at).getTime();
-            const resetTimestamp = oldestTime + 12 * 60 * 60 * 1000;
-            setResetTime(new Date(resetTimestamp).toISOString());
-          } else {
-            setResetTime(null);
-          }
-        } else {
-          setResetTime(null);
-        }
+        setResetTime(null);
       }
     } catch (err) {
       console.error('Error fetching card usage:', err);
@@ -94,32 +128,38 @@ export function CardUsageProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
-  // Load and refresh usage when user changes, and subscribe to realtime updates
+  // Load and refresh usage when user changes
   useEffect(() => {
     fetchUsage();
+  }, [user, fetchUsage]);
 
-    if (!user || isDemoMode) return;
-
-    // Subscribe to realtime changes on the cards table for this user
-    const channel = supabase
-      .channel(`realtime-cards-${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'cards',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          fetchUsage();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
+  // Listen for changes in other tabs
+  useEffect(() => {
+    if (!user) return;
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === `flick_generation_history_${user.id}`) {
+        fetchUsage();
+      }
     };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [user, fetchUsage]);
+
+  const recordGeneration = useCallback((count: number) => {
+    if (!user) return;
+    const key = `flick_generation_history_${user.id}`;
+    const stored = localStorage.getItem(key) || '[]';
+    try {
+      const history = JSON.parse(stored);
+      history.push({
+        count,
+        timestamp: new Date().toISOString()
+      });
+      localStorage.setItem(key, JSON.stringify(history));
+      fetchUsage();
+    } catch (e) {
+      console.error("Error saving generation history:", e);
+    }
   }, [user, fetchUsage]);
 
   const refreshUsage = useCallback(async () => {
@@ -143,6 +183,7 @@ export function CardUsageProvider({ children }: { children: React.ReactNode }) {
         refreshUsage,
         canGenerate,
         resetTime,
+        recordGeneration,
       }}
     >
       {children}

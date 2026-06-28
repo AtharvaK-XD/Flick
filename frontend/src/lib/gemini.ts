@@ -83,7 +83,12 @@ ${content.slice(0, 15000)}`;
             if (text) details = text.slice(0, 150);
           } catch (_) {}
         }
-        throw new Error(`Gemini API error: ${details} (${response.status})`);
+        
+        let errorMessage = `Gemini API error: ${details} (${response.status})`;
+        if (response.status === 429 || String(details).toLowerCase().includes('quota')) {
+          errorMessage += ". Tip: You can configure your own Gemini API key in the Settings page to bypass the shared rate limits.";
+        }
+        throw new Error(errorMessage);
       }
 
       const geminiData = await response.json();
@@ -143,7 +148,21 @@ ${content.slice(0, 15000)}`;
       throw new Error(errMessage);
     } catch (supabaseErr: any) {
       console.warn("Supabase Edge function failed:", supabaseErr);
-      lastError = supabaseErr || lastError;
+      
+      // If we have a descriptive client-side error (like Gemini 429 quota/auth/503),
+      // and the Supabase error is a generic 'Failed to fetch' network error,
+      // preserve the more descriptive Gemini error.
+      const isSupabaseNetworkError = 
+        supabaseErr && 
+        (supabaseErr.message === 'Failed to fetch' || 
+         supabaseErr.name === 'TypeError' ||
+         String(supabaseErr).includes('Failed to fetch'));
+
+      if (lastError && isSupabaseNetworkError) {
+        // Keep the existing Gemini API error as lastError
+      } else {
+        lastError = supabaseErr || lastError;
+      }
     }
   }
 
