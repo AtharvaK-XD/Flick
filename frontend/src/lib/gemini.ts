@@ -21,15 +21,20 @@ export interface GenerationResult {
 export async function generateCards(
   content: string,
   count: number = 10,
-  customApiKey?: string
+  customApiKey?: string,
+  model: string = 'gemini-2.5-flash'
 ): Promise<GenerationResult> {
   const parsedCount = Number(count) || 10;
   let lastError: any = null;
   
+  const isGroq = model.startsWith('llama-') || model.startsWith('gemma-');
+  
   // Decide which API key to use for client-side generation
   // 1. User-provided custom API key from settings takes priority
-  // 2. Build-time environment variable VITE_GEMINI_API_KEY as general fallback
-  const activeApiKey = customApiKey || import.meta.env.VITE_GEMINI_API_KEY;
+  // 2. Build-time environment variable as general fallback
+  const activeApiKey = isGroq
+    ? (customApiKey || import.meta.env.VITE_GROQ_API_KEY)
+    : (customApiKey || import.meta.env.VITE_GEMINI_API_KEY);
 
   if (activeApiKey) {
     const prompt = `You are a flashcard generator. Given the content below, generate exactly ${parsedCount} high-quality flashcards.
@@ -53,47 +58,86 @@ Return this exact JSON structure:
 Content to process:
 ${content.slice(0, 15000)}`;
 
-    // Use gemini-2.5-flash which is compatible with all key formats (including newer AQ. keys)
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${activeApiKey}`;
-    
     try {
-      const response = await fetch(geminiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { 
-            temperature: 0.4, 
-            maxOutputTokens: 8192,
-            responseMimeType: "application/json"
+      let rawText = '';
+      if (isGroq) {
+        // Groq API call
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${activeApiKey}`
           },
-        }),
-      });
+          body: JSON.stringify({
+            model: model,
+            messages: [
+              { role: 'user', content: prompt }
+            ],
+            temperature: 0.4,
+            response_format: { type: 'json_object' }
+          })
+        });
 
-      if (!response.ok) {
-        let details = response.statusText;
-        try {
-          const errJson = await response.json();
-          if (errJson && errJson.error) {
-            details = errJson.error.message || JSON.stringify(errJson.error);
-          }
-        } catch (e) {
+        if (!response.ok) {
+          let details = response.statusText;
           try {
-            const text = await response.text();
-            if (text) details = text.slice(0, 150);
+            const errJson = await response.json();
+            if (errJson && errJson.error) {
+              details = errJson.error.message || JSON.stringify(errJson.error);
+            }
           } catch (_) {}
+          
+          let errorMessage = `Groq API error: ${details} (${response.status})`;
+          if (response.status === 429 || String(details).toLowerCase().includes('rate limit') || String(details).toLowerCase().includes('quota')) {
+            errorMessage += ". Tip: You can configure your own Groq API key in the Settings page to bypass the shared rate limits.";
+          }
+          throw new Error(errorMessage);
         }
+
+        const groqData = await response.json();
+        rawText = groqData.choices?.[0]?.message?.content ?? '';
+      } else {
+        // Gemini API call
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${activeApiKey}`;
         
-        let errorMessage = `Gemini API error: ${details} (${response.status})`;
-        if (response.status === 429 || String(details).toLowerCase().includes('quota')) {
-          errorMessage += ". Tip: You can configure your own Gemini API key in the Settings page to bypass the shared rate limits.";
+        const response = await fetch(geminiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { 
+              temperature: 0.4, 
+              maxOutputTokens: 8192,
+              responseMimeType: "application/json"
+            },
+          }),
+        });
+
+        if (!response.ok) {
+          let details = response.statusText;
+          try {
+            const errJson = await response.json();
+            if (errJson && errJson.error) {
+              details = errJson.error.message || JSON.stringify(errJson.error);
+            }
+          } catch (e) {
+            try {
+              const text = await response.text();
+              if (text) details = text.slice(0, 150);
+            } catch (_) {}
+          }
+          
+          let errorMessage = `Gemini API error: ${details} (${response.status})`;
+          if (response.status === 429 || String(details).toLowerCase().includes('quota')) {
+            errorMessage += ". Tip: You can configure your own Gemini API key in the Settings page to bypass the shared rate limits.";
+          }
+          throw new Error(errorMessage);
         }
-        throw new Error(errorMessage);
+
+        const geminiData = await response.json();
+        rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
       }
 
-      const geminiData = await response.json();
-      const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-      
       // Strip markdown formatting if any
       const cleaned = rawText.replace(/```json|```/g, '').trim();
       const parsed = JSON.parse(cleaned);
@@ -132,7 +176,7 @@ ${content.slice(0, 15000)}`;
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
-        body: JSON.stringify({ content, count: parsedCount }),
+        body: JSON.stringify({ content, count: parsedCount, model }),
       });
 
       if (response.ok) {

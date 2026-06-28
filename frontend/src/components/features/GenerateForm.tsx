@@ -47,6 +47,7 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
   const [isQuotaExceeded, setIsQuotaExceeded] = useState(false);
   const [tempApiKey, setTempApiKey] = useState('');
   const [lastContent, setLastContent] = useState('');
+  const [selectedModel, setSelectedModel] = useState<string>('gemini-2.5-flash');
 
   // Review phase states
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
@@ -216,10 +217,15 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
     setGeneratedCards([]);
 
     try {
-      setGenerationStep('Asking Gemini AI...');
-      const customKey = localStorage.getItem('flick_custom_gemini_key') || undefined;
+      const isGroq = selectedModel.startsWith('llama-') || selectedModel.startsWith('gemma-');
+      setGenerationStep(isGroq ? 'Asking Groq AI...' : 'Asking Gemini AI...');
+      
+      const customKey = isGroq
+        ? (localStorage.getItem('flick_custom_groq_key') || undefined)
+        : (localStorage.getItem('flick_custom_gemini_key') || undefined);
+        
       setGenerationStep('Building cards...');
-      const result = await generateCards(contentToProcess, cardCount, customKey);
+      const result = await generateCards(contentToProcess, cardCount, customKey, selectedModel);
       
       if (result.cards && result.cards.length > 0) {
         recordGeneration(result.cards.length);
@@ -245,11 +251,13 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
       const errMsg = err.message || String(err);
       const isQuotaError = 
         errMsg.toLowerCase().includes('quota') || 
-        errMsg.includes('429');
+        errMsg.includes('429') || 
+        errMsg.toLowerCase().includes('rate limit');
         
       if (isQuotaError) {
         setIsQuotaExceeded(true);
-        toast('Gemini API quota reached. Please configure a custom key to continue.', 'error');
+        const isGroq = selectedModel.startsWith('llama-') || selectedModel.startsWith('gemma-');
+        toast(`${isGroq ? 'Groq' : 'Gemini'} API quota reached. Please configure a custom key to continue.`, 'error');
       } else {
         toast(errMsg || 'Failed to generate cards.', 'error');
       }
@@ -266,7 +274,10 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
       return;
     }
     
-    localStorage.setItem('flick_custom_gemini_key', tempApiKey.trim());
+    const isGroq = selectedModel.startsWith('llama-') || selectedModel.startsWith('gemma-');
+    const storageKey = isGroq ? 'flick_custom_groq_key' : 'flick_custom_gemini_key';
+    
+    localStorage.setItem(storageKey, tempApiKey.trim());
     setIsQuotaExceeded(false);
     toast('API Key saved successfully! Retrying card generation...', 'success');
     
@@ -657,6 +668,11 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
   // QUOTA EXCEEDED PHASE
   // ═══════════════════════════════════════════
   if (isQuotaExceeded) {
+    const isGroq = selectedModel.startsWith('llama-') || selectedModel.startsWith('gemma-');
+    const providerName = isGroq ? 'Groq' : 'Gemini';
+    const keyLink = isGroq ? 'https://console.groq.com/keys' : 'https://aistudio.google.com';
+    const portalName = isGroq ? 'Groq Console' : 'Google AI Studio';
+
     return (
       <div className="w-full flex justify-center py-8">
         <motion.div 
@@ -673,7 +689,7 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
               <Key size={22} className="animate-pulse" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-[var(--text-primary)]">Gemini API Quota Reached</h2>
+              <h2 className="text-lg font-bold text-[var(--text-primary)]">{providerName} API Quota Reached</h2>
               <p className="text-xs text-[var(--text-secondary)] mt-0.5">The shared generation limit has been exceeded.</p>
             </div>
           </div>
@@ -682,33 +698,33 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
 
           {/* Description */}
           <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-            Due to high traffic, Flick's shared Google Gemini API key has hit its free-tier rate limit. 
-            To generate your flashcards right now, please paste your personal Gemini API key. It will be saved locally in your browser.
+            Due to high traffic, Flick's shared {providerName} API key has hit its free-tier rate limit. 
+            To generate your flashcards right now, please paste your personal {providerName} API key. It will be saved locally in your browser.
           </p>
 
           {/* Input Form */}
           <form onSubmit={handleSaveQuotaKey} className="space-y-4 pt-1">
             <div className="space-y-2">
               <label className="text-[10px] font-mono text-[var(--text-muted)] uppercase tracking-wider block">
-                Your Gemini API Key
+                Your {providerName} API Key
               </label>
               <input
                 type="password"
                 value={tempApiKey}
                 onChange={(e) => setTempApiKey(e.target.value)}
-                placeholder="AIzaSy..."
+                placeholder={isGroq ? "gsk_..." : "AIzaSy..."}
                 className="input-theme w-full px-4 py-3 text-xs placeholder-[var(--text-muted)] font-mono"
                 required
               />
               <p className="text-[10px] text-[var(--text-muted)] leading-relaxed">
                 Don't have a key? You can get a free, personal key in 30 seconds from{' '}
                 <a 
-                  href="https://aistudio.google.com" 
+                  href={keyLink} 
                   target="_blank" 
                   rel="noopener noreferrer" 
                   className="text-purple-400 hover:text-purple-300 font-semibold underline"
                 >
-                  Google AI Studio
+                  {portalName}
                 </a>.
               </p>
             </div>
@@ -901,7 +917,7 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
           </div>
 
           {/* Form Settings Controls */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-white/5">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-4 border-t border-white/5">
             {/* Title Input */}
             <div className="flex flex-col gap-2 text-left">
               <label className="text-xs font-mono text-[var(--text-secondary)] uppercase">
@@ -947,6 +963,31 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
                     </button>
                   );
                 })}
+              </div>
+            </div>
+
+            {/* AI Model Selector */}
+            <div className="flex flex-col gap-2 text-left">
+              <label className="text-xs font-mono text-[var(--text-secondary)] uppercase">
+                AI Model Engine
+              </label>
+              <div className="relative">
+                <select
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                  className="input-theme w-full px-4 py-2.5 text-xs bg-surface cursor-pointer focus:outline-none text-[var(--text-primary)]"
+                >
+                  <optgroup label="Google Gemini" className="bg-surface text-[var(--text-primary)]">
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash ⚡️ (Fast, Default)</option>
+                    <option value="gemini-1.5-pro">Gemini 1.5 Pro 🧠 (Deep Reason)</option>
+                    <option value="gemini-1.5-flash">Gemini 1.5 Flash 🔄 (Stable)</option>
+                  </optgroup>
+                  <optgroup label="Groq AI (Ultra Fast)" className="bg-surface text-[var(--text-primary)]">
+                    <option value="llama-3.1-70b-versatile">Llama 3.1 70B 🦙 (Advanced)</option>
+                    <option value="llama-3.1-8b-instant">Llama 3.1 8B 🚀 (Instant Speed)</option>
+                    <option value="gemma-2-9b-it">Gemma 2 9B 💎 (High Precision)</option>
+                  </optgroup>
+                </select>
               </div>
             </div>
           </div>
