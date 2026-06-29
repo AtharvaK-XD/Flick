@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, Link2, FileText, X, Sparkles, Check, ArrowLeft, ChevronLeft, ChevronRight, ThumbsUp, ThumbsDown, HelpCircle, RotateCcw, Key } from 'lucide-react';
+import { Upload, Link2, FileText, X, Sparkles, Check, ArrowLeft, ChevronLeft, ChevronRight, ThumbsUp, ThumbsDown, HelpCircle, RotateCcw, Key, Volume2 } from 'lucide-react';
 import { generateCards, inferTitle } from '../../lib/gemini';
 import Button from '../ui/Button';
 import Loader from '../ui/Loader';
@@ -73,6 +73,89 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
   
   // Card ref for layout (no tilt — removing 3D tilt prevents hover lag)
   const reviewCardRef = useRef<HTMLDivElement>(null);
+
+  // Text-To-Speech States & Handlers
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [ttsLang, setTtsLang] = useState<'en' | 'hi'>(() => {
+    return (localStorage.getItem('flick_tts_lang') as 'en' | 'hi') || 'en';
+  });
+
+  const handleSpeak = (e: React.MouseEvent, text: string) => {
+    e.stopPropagation();
+
+    if (!('speechSynthesis' in window)) {
+      toast("Text-to-speech is not supported in this browser.", "error");
+      return;
+    }
+
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    
+    const cleanText = text.replace(/[#*`[\]()_]/g, '').trim();
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    const voices = window.speechSynthesis.getVoices();
+    
+    let voice = null;
+    if (ttsLang === 'hi') {
+      voice = voices.find(v => v.lang.startsWith('hi') || v.lang.toLowerCase().includes('hindi'));
+      utterance.lang = 'hi-IN';
+    } else {
+      voice = voices.find(v => v.lang.startsWith('en') || v.lang.toLowerCase().includes('english') || v.name.toLowerCase().includes('google'));
+      utterance.lang = 'en-US';
+    }
+    
+    if (voice) {
+      utterance.voice = voice;
+    }
+
+    utterance.onend = () => {
+      setIsSpeaking(false);
+    };
+
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+    };
+
+    setIsSpeaking(true);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const toggleLanguage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newLang = ttsLang === 'en' ? 'hi' : 'en';
+    setTtsLang(newLang);
+    localStorage.setItem('flick_tts_lang', newLang);
+    
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
+  };
+
+  // Sync state if voices finish speaking
+  useEffect(() => {
+    if (!('speechSynthesis' in window)) return;
+    const interval = setInterval(() => {
+      if (isSpeaking && !window.speechSynthesis.speaking) {
+        setIsSpeaking(false);
+      }
+    }, 250);
+    return () => clearInterval(interval);
+  }, [isSpeaking]);
+
+  // Cancel speech on unmount or phase change
+  useEffect(() => {
+    return () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, [phase]);
 
   // Handle PDF text extraction
   const extractPdfText = async (file: File): Promise<string> => {
@@ -623,7 +706,27 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
                       <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-violet-500/[0.04] rounded-full blur-3xl pointer-events-none" />
                       <div className="relative z-10 flex flex-col h-full p-8">
                         <div className="flex justify-between items-center">
-                          <span className="text-[10px] font-mono text-purple-400/80 uppercase tracking-[0.18em]">Question</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-mono text-purple-400/80 uppercase tracking-[0.18em]">Question</span>
+                            <div className="flex items-center gap-1 bg-white/5 p-0.5 rounded-lg border border-white/5 ml-2">
+                              <button
+                                type="button"
+                                title={isSpeaking ? "Stop speaking" : "Speak question"}
+                                className="p-1 rounded hover:bg-white/10 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                                onClick={(e) => handleSpeak(e, currentCard.front)}
+                              >
+                                <Volume2 size={12} className={cn(isSpeaking ? "animate-pulse text-purple-400" : "")} />
+                              </button>
+                              <button
+                                type="button"
+                                title="Switch pronunciation language (English / Hindi)"
+                                className="px-1.5 py-0.5 rounded hover:bg-white/10 text-[9px] font-bold text-purple-400 hover:text-purple-300 transition-colors tracking-tight font-sans"
+                                onClick={toggleLanguage}
+                              >
+                                {ttsLang === 'en' ? 'EN' : 'HI'}
+                              </button>
+                            </div>
+                          </div>
                           <span className="text-[10px] font-mono text-[var(--text-muted)]">{currentCardIndex + 1} / {generatedCards.length}</span>
                         </div>
                         <div className="flex-1 flex items-center justify-center px-3">
@@ -648,7 +751,27 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
                       <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-teal-500/[0.04] rounded-full blur-3xl pointer-events-none" />
                       <div className="relative z-10 flex flex-col h-full p-8">
                         <div className="flex justify-between items-center">
-                          <span className="text-[10px] font-mono text-emerald-400/80 uppercase tracking-[0.18em]">Answer</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-mono text-emerald-400/80 uppercase tracking-[0.18em]">Answer</span>
+                            <div className="flex items-center gap-1 bg-white/5 p-0.5 rounded-lg border border-white/5 ml-2">
+                              <button
+                                type="button"
+                                title={isSpeaking ? "Stop speaking" : "Speak answer"}
+                                className="p-1 rounded hover:bg-white/10 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                                onClick={(e) => handleSpeak(e, currentCard.back)}
+                              >
+                                <Volume2 size={12} className={cn(isSpeaking ? "animate-pulse text-emerald-400" : "")} />
+                              </button>
+                              <button
+                                type="button"
+                                title="Switch pronunciation language (English / Hindi)"
+                                className="px-1.5 py-0.5 rounded hover:bg-white/10 text-[9px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors tracking-tight font-sans"
+                                onClick={toggleLanguage}
+                              >
+                                {ttsLang === 'en' ? 'EN' : 'HI'}
+                              </button>
+                            </div>
+                          </div>
                           <button
                             onClick={(e) => { e.stopPropagation(); setIsFlipped(false); }}
                             className="p-1.5 rounded-md hover:bg-white/5 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
