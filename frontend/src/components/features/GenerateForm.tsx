@@ -1065,12 +1065,12 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
                   {/* Floating Speech-To-Text Controls inside the Textarea */}
                   <div className="absolute right-3 bottom-3 flex items-center gap-2 z-20">
                     {/* Language selector toggle */}
-                    {recognition && (
+                    {recognitionRef.current && (
                       <button
                         type="button"
                         onClick={() => {
                           if (isListening) {
-                            recognition.stop();
+                            recognitionRef.current.stop();
                             setIsListening(false);
                           }
                           setMicLang(prev => prev === 'en-US' ? 'hi-IN' : 'en-US');
