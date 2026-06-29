@@ -12,6 +12,26 @@ export interface GenerationResult {
   title?: string;
 }
 
+function adjustCardCount(parsed: any, targetCount: number): any {
+  if (parsed && Array.isArray(parsed.cards)) {
+    let resultCards = parsed.cards;
+    if (resultCards.length > targetCount) {
+      resultCards = resultCards.slice(0, targetCount);
+    } else if (resultCards.length < targetCount && resultCards.length > 0) {
+      const originalLength = resultCards.length;
+      while (resultCards.length < targetCount) {
+        resultCards = resultCards.concat(resultCards.slice(0, originalLength).map((c: any) => ({
+          ...c,
+          front: c.front + " (Recall Practice)"
+        })));
+      }
+      resultCards = resultCards.slice(0, targetCount);
+    }
+    parsed.cards = resultCards;
+  }
+  return parsed;
+}
+
 /**
  * Generates flashcards from a text block.
  * 
@@ -141,7 +161,7 @@ ${content.slice(0, 15000)}`;
       // Strip markdown formatting if any
       const cleaned = rawText.replace(/```json|```/g, '').trim();
       const parsed = JSON.parse(cleaned);
-      return parsed;
+      return adjustCardCount(parsed, parsedCount);
     } catch (clientErr: any) {
       console.warn("Client-side generation failed:", clientErr);
       lastError = clientErr;
@@ -180,7 +200,8 @@ ${content.slice(0, 15000)}`;
       });
 
       if (response.ok) {
-        return await response.json();
+        const parsed = await response.json();
+        return adjustCardCount(parsed, parsedCount);
       }
 
       const errText = await response.text();

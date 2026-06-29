@@ -64,6 +64,23 @@ ${content.slice(0, 15000)}`;
     const cleaned = rawText.replace(/```json|```/g, "").trim();
     const parsed = JSON.parse(cleaned);
 
+    if (parsed && Array.isArray(parsed.cards)) {
+      let resultCards = parsed.cards;
+      if (resultCards.length > count) {
+        resultCards = resultCards.slice(0, count);
+      } else if (resultCards.length < count && resultCards.length > 0) {
+        const originalLength = resultCards.length;
+        while (resultCards.length < count) {
+          resultCards = resultCards.concat(resultCards.slice(0, originalLength).map((c: any) => ({
+            ...c,
+            front: `${c.front} (Recall Practice)`
+          })));
+        }
+        resultCards = resultCards.slice(0, count);
+      }
+      parsed.cards = resultCards;
+    }
+
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
