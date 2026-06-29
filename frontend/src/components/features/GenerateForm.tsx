@@ -157,10 +157,17 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
     };
   }, [phase]);
 
-  // Speech-To-Text Dictation States & Handlers
+  // Speech-To-Text Dictation States, Refs & Handlers
   const [isListening, setIsListening] = useState(false);
-  const [recognition, setRecognition] = useState<any>(null);
   const [micLang, setMicLang] = useState<'en-US' | 'hi-IN'>('en-US');
+  const recognitionRef = useRef<any>(null);
+  const baseTextRef = useRef('');
+  const textInputRef = useRef(textInput);
+
+  // Keep textInputRef synced with textInput state updates
+  useEffect(() => {
+    textInputRef.current = textInput;
+  }, [textInput]);
 
   // Initialize Speech Recognition
   useEffect(() => {
@@ -168,32 +175,34 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
     if (SpeechRecognition) {
       const rec = new SpeechRecognition();
       rec.continuous = true;
-      rec.interimResults = false; // Only get stable final results to avoid transcription duplication and capture reliably
+      rec.interimResults = true; // Use interim results for instant, real-time typing feedback
       rec.lang = micLang;
 
       rec.onstart = () => {
         setIsListening(true);
+        // Save current textarea content as the baseline for this recording session
+        baseTextRef.current = textInputRef.current;
       };
 
       rec.onresult = (event: any) => {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
+        let sessionTranscript = '';
+        for (let i = 0; i < event.results.length; ++i) {
           if (event.results[i] && event.results[i][0]) {
-            transcript += event.results[i][0].transcript;
+            sessionTranscript += event.results[i][0].transcript;
           }
         }
-        if (transcript) {
-          setTextInput(prev => {
-            const separator = prev.length > 0 && !prev.endsWith(' ') ? ' ' : '';
-            return prev + separator + transcript.trim();
-          });
-        }
+        
+        const base = baseTextRef.current;
+        const separator = base.length > 0 && !base.endsWith(' ') ? ' ' : '';
+        setTextInput(base + separator + sessionTranscript.trim());
       };
 
       rec.onerror = (event: any) => {
-        console.error("Speech recognition error", event.error);
+        console.error("Speech recognition error:", event.error);
         if (event.error === 'not-allowed') {
-          toast("Microphone access denied. Please check site permissions.", "error");
+          toast("Microphone access denied. Please check your browser site permissions.", "error");
+        } else {
+          toast(`Speech recognition error: ${event.error}`, "error");
         }
         setIsListening(false);
       };
@@ -202,7 +211,7 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
         setIsListening(false);
       };
 
-      setRecognition(rec);
+      recognitionRef.current = rec;
 
       return () => {
         try {
@@ -213,6 +222,7 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
   }, [micLang, toast]);
 
   const toggleListening = () => {
+    const recognition = recognitionRef.current;
     if (!recognition) {
       toast("Speech recognition is not supported in this browser.", "error");
       return;
@@ -232,8 +242,8 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
 
   // Turn off mic when switching tabs or generating
   useEffect(() => {
-    if (isListening && recognition) {
-      recognition.stop();
+    if (isListening && recognitionRef.current) {
+      recognitionRef.current.stop();
     }
   }, [activeTab, isGenerating]);
 
