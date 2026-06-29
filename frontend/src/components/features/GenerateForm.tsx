@@ -168,20 +168,24 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
     if (SpeechRecognition) {
       const rec = new SpeechRecognition();
       rec.continuous = true;
-      rec.interimResults = true;
+      rec.interimResults = false; // Only get stable final results to avoid transcription duplication and capture reliably
       rec.lang = micLang;
 
+      rec.onstart = () => {
+        setIsListening(true);
+      };
+
       rec.onresult = (event: any) => {
-        let finalTranscript = '';
+        let transcript = '';
         for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
+          if (event.results[i] && event.results[i][0]) {
+            transcript += event.results[i][0].transcript;
           }
         }
-        if (finalTranscript) {
+        if (transcript) {
           setTextInput(prev => {
             const separator = prev.length > 0 && !prev.endsWith(' ') ? ' ' : '';
-            return prev + separator + finalTranscript;
+            return prev + separator + transcript.trim();
           });
         }
       };
@@ -199,6 +203,12 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
       };
 
       setRecognition(rec);
+
+      return () => {
+        try {
+          rec.stop();
+        } catch (e) {}
+      };
     }
   }, [micLang, toast]);
 
@@ -210,11 +220,9 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
 
     if (isListening) {
       recognition.stop();
-      setIsListening(false);
     } else {
       try {
         recognition.start();
-        setIsListening(true);
         toast("Microphone active. Start speaking!", "info");
       } catch (err) {
         console.error("Speech recognition start failed", err);
@@ -226,7 +234,6 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
   useEffect(() => {
     if (isListening && recognition) {
       recognition.stop();
-      setIsListening(false);
     }
   }, [activeTab, isGenerating]);
 
