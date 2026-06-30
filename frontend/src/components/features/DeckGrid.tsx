@@ -5,6 +5,19 @@ import { truncateText } from '../../lib/utils';
 import { BookOpen, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 
+const getSourcePreviewText = (preview: string | null) => {
+  if (!preview) return '';
+  if (preview.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(preview);
+      return parsed.preview || '';
+    } catch (e) {
+      // Fallback
+    }
+  }
+  return preview;
+};
+
 interface DeckGridProps {
   decks: Deck[];
   allCards: Card[];
@@ -110,7 +123,7 @@ export function DeckGrid({ decks, allCards }: DeckGridProps) {
                 {deck.source_preview && (
                   <div className="absolute right-0 top-6 scale-95 opacity-0 group-hover/tooltip:opacity-100 group-hover/tooltip:scale-100 pointer-events-none transition-all duration-150 origin-top-right z-30 w-56 p-2.5 rounded bg-[#1E1E22] border border-white/10 shadow-2xl text-[10px] leading-relaxed text-[var(--text-secondary)] font-mono">
                     <span className="text-[9px] uppercase tracking-wider text-purple-400 block mb-1">Source Preview</span>
-                    {truncateText(deck.source_preview, 100)}
+                    {truncateText(getSourcePreviewText(deck.source_preview), 100)}
                   </div>
                 )}
               </div>

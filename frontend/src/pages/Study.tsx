@@ -102,6 +102,19 @@ export function Study() {
     );
   }
 
+  const getDeckTimerLimit = () => {
+    if (!deck || !deck.source_preview) return undefined;
+    if (deck.source_preview.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(deck.source_preview);
+        return parsed.timerLimit || undefined;
+      } catch (e) {
+        // Fallback
+      }
+    }
+    return undefined;
+  };
+
   return (
     <PageWrapper className="min-h-screen bg-[#0C0C0E]">
       <StudyMode
@@ -110,6 +123,7 @@ export function Study() {
         onReviewCard={reviewCard}
         onFinishSession={handleFinishSession}
         onClose={handleClose}
+        timerLimit={getDeckTimerLimit()}
       />
     </PageWrapper>
   );

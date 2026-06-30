@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import type { Card } from '../../types';
 import { FlipCard } from '../ui/FlipCard';
 import Button from '../ui/Button';
-import { CheckCircle, Sparkles, ArrowLeft, Zap } from 'lucide-react';
+import { CheckCircle, Sparkles, ArrowLeft, Zap, Clock } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
@@ -13,6 +13,7 @@ interface StudyModeProps {
   onReviewCard: (cardId: string, quality: 0 | 1 | 2 | 3) => Promise<any>;
   onFinishSession: (cardsCount: number) => Promise<void>;
   onClose: () => void;
+  timerLimit?: number;
 }
 
 export function StudyMode({
@@ -21,6 +22,7 @@ export function StudyMode({
   onReviewCard,
   onFinishSession,
   onClose,
+  timerLimit,
 }: StudyModeProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -38,6 +40,14 @@ export function StudyMode({
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [hasAnswered, setHasAnswered] = useState(false);
   const [showQuizHint, setShowQuizHint] = useState(false);
+
+  // Quiz Timer & Stats States
+  const [timeLeft, setTimeLeft] = useState<number>(timerLimit ? timerLimit * 60 : 0);
+  const [elapsedTime, setElapsedTime] = useState<number>(0);
+  const [rightAnswers, setRightAnswers] = useState<number>(0);
+  const [wrongAnswers, setWrongAnswers] = useState<number>(0);
+  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(!!timerLimit);
+  const [timeExpired, setTimeExpired] = useState<boolean>(false);
 
   const currentCard = cards[currentIndex];
   const progressPercent = cards.length > 0 ? ((currentIndex) / cards.length) * 100 : 0;
@@ -59,6 +69,35 @@ export function StudyMode({
     setIsFlipped(false);
     setShowQuizHint(false);
   }, [currentIndex, currentCard]);
+
+  // Quiz Timer countdown/elapsed effect
+  useEffect(() => {
+    if (isFinished || studyStyle !== 'quiz') return;
+
+    const timer = setInterval(() => {
+      setElapsedTime(prev => prev + 1);
+      if (timerLimit && isTimerRunning) {
+        setTimeLeft(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            setIsTimerRunning(false);
+            setTimeExpired(true);
+            handleSessionComplete();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timerLimit, isTimerRunning, isFinished, studyStyle]);
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
 
   const triggerFeedback = (quality: 0 | 1 | 2 | 3) => {
     const qualities = [
@@ -140,8 +179,10 @@ export function StudyMode({
 
     const isCorrect = choice === currentCard.back;
     if (isCorrect) {
+      setRightAnswers(prev => prev + 1);
       triggerFeedback(2); // Good (+10 XP)
     } else {
+      setWrongAnswers(prev => prev + 1);
       triggerFeedback(0); // Again (Review soon)
     }
   };
@@ -174,6 +215,7 @@ export function StudyMode({
 
   const handleSessionComplete = async () => {
     setIsFinished(true);
+    setIsTimerRunning(false);
     
     // Confetti Burst!
     confetti({
@@ -260,7 +302,24 @@ export function StudyMode({
           {deckTitle}
         </span>
 
-        <span className="text-xs font-mono text-[var(--text-secondary)] bg-white/5 px-2.5 py-0.5 rounded-full">
+        {timerLimit ? (
+          <div className={cn(
+            "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono border transition-all duration-300",
+            timeLeft <= 30
+              ? "bg-rose-500/10 border-rose-500/30 text-rose-400 font-bold animate-pulse"
+              : "bg-purple-500/5 border-purple-500/10 text-purple-400"
+          )}>
+            <Clock size={13} className={cn(timeLeft <= 30 ? "text-rose-400 text-rose-500 font-bold" : "text-purple-400")} />
+            <span>{formatTime(timeLeft)}</span>
+          </div>
+        ) : studyStyle === 'quiz' && (
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono border bg-white/5 border-white/5 text-[var(--text-secondary)]">
+            <Clock size={13} />
+            <span>{formatTime(elapsedTime)}</span>
+          </div>
+        )}
+
+        <span className="text-xs font-mono text-[var(--text-secondary)] bg-white/5 px-2.5 py-0.5 rounded-full font-mono">
           {isFinished ? cards.length : currentIndex + 1} / {cards.length}
         </span>
       </div>
@@ -429,38 +488,97 @@ export function StudyMode({
             animate={{ opacity: 1, scale: 1 }}
             className="max-w-md w-full text-center space-y-6 bg-surface border border-[var(--border)] rounded-xl p-8 shadow-2xl"
           >
-            <div className="w-12 h-12 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mx-auto text-purple-400">
-              <CheckCircle size={24} />
-            </div>
+            {studyStyle === 'quiz' ? (
+              /* MCQ Performance Report */
+              <>
+                <div className="w-12 h-12 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mx-auto text-purple-400">
+                  <CheckCircle size={24} />
+                </div>
 
-            <div className="space-y-2">
-              <h2 className="text-lg font-semibold text-[var(--text-primary)] tracking-tight">
-                Deck study completed!
-              </h2>
-              <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-                Awesome work. The SM-2 algorithm has updated your recall intervals. 
-                {intervals.length > 0 && ` Your average card interval is now ${getAverageInterval()} days.`}
-              </p>
-            </div>
+                <div className="space-y-2">
+                  <h2 className="text-lg font-semibold text-[var(--text-primary)] tracking-tight">
+                    {timeExpired ? "⏳ Time's Up! Quiz ended." : "🎉 Quiz Completed!"}
+                  </h2>
+                  <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                    Here is how you performed in this multiple-choice quiz session.
+                  </p>
+                </div>
 
-            <div className="bg-app border border-[var(--border)] rounded-lg p-4 grid grid-cols-2 gap-4">
-              <div className="text-left">
-                <span className="text-[10px] text-[var(--text-muted)] font-mono uppercase block">
-                  Reviewed
-                </span>
-                <span className="text-lg font-semibold text-[var(--text-primary)]">
-                  {reviewedCount} cards
-                </span>
-              </div>
-              <div className="text-left">
-                <span className="text-[10px] text-[var(--text-muted)] font-mono uppercase block">
-                  Awarded
-                </span>
-                <span className="text-lg font-semibold text-purple-400 flex items-center gap-1">
-                  +{reviewedCount * 10} XP <Zap size={14} className="fill-purple-400 text-purple-400" />
-                </span>
-              </div>
-            </div>
+                <div className="bg-[#131315] border border-white/5 rounded-2xl p-5 space-y-4 text-left">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="text-center p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
+                      <span className="text-[9px] text-emerald-400/70 font-mono uppercase tracking-wider block mb-1">Right</span>
+                      <span className="text-xl font-bold text-emerald-400 font-mono">{rightAnswers}</span>
+                    </div>
+                    <div className="text-center p-3 rounded-xl bg-rose-500/5 border border-rose-500/10">
+                      <span className="text-[9px] text-rose-400/70 font-mono uppercase tracking-wider block mb-1">Wrong</span>
+                      <span className="text-xl font-bold text-rose-400 font-mono">{wrongAnswers}</span>
+                    </div>
+                    <div className="text-center p-3 rounded-xl bg-purple-500/5 border border-purple-500/10">
+                      <span className="text-[9px] text-purple-400/70 font-mono uppercase tracking-wider block mb-1">Time</span>
+                      <span className="text-sm font-bold text-purple-400 font-mono block mt-1.5">
+                        {Math.floor(elapsedTime / 60)}m {elapsedTime % 60}s
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5 pt-2">
+                    <div className="flex justify-between items-center text-[10px] font-mono">
+                      <span className="text-[var(--text-secondary)]">Accuracy Score</span>
+                      <span className="text-purple-400 font-semibold">{Math.round((rightAnswers / cards.length) * 100)}%</span>
+                    </div>
+                    <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-purple-500 to-purple-400 rounded-full" 
+                        style={{ width: `${(rightAnswers / cards.length) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {timeExpired && (
+                    <div className="p-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl text-[10px] font-mono text-center uppercase tracking-wider">
+                      ⚠️ Session auto-submitted due to time limit expiration.
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              /* Standard Flashcard Screen */
+              <>
+                <div className="w-12 h-12 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mx-auto text-purple-400">
+                  <CheckCircle size={24} />
+                </div>
+
+                <div className="space-y-2">
+                  <h2 className="text-lg font-semibold text-[var(--text-primary)] tracking-tight">
+                    Deck study completed!
+                  </h2>
+                  <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                    Awesome work. The SM-2 algorithm has updated your recall intervals. 
+                    {intervals.length > 0 && ` Your average card interval is now ${getAverageInterval()} days.`}
+                  </p>
+                </div>
+
+                <div className="bg-app border border-[var(--border)] rounded-lg p-4 grid grid-cols-2 gap-4">
+                  <div className="text-left">
+                    <span className="text-[10px] text-[var(--text-muted)] font-mono uppercase block">
+                      Reviewed
+                    </span>
+                    <span className="text-lg font-semibold text-[var(--text-primary)]">
+                      {reviewedCount} cards
+                    </span>
+                  </div>
+                  <div className="text-left">
+                    <span className="text-[10px] text-[var(--text-muted)] font-mono uppercase block">
+                      Awarded
+                    </span>
+                    <span className="text-lg font-semibold text-purple-400 flex items-center gap-1">
+                      +{reviewedCount * 10} XP <Zap size={14} className="fill-purple-400 text-purple-400" />
+                    </span>
+                  </div>
+                </div>
+              </>
+            )}
 
             <Button
               onClick={onClose}

@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, Link2, FileText, X, Sparkles, Check, ArrowLeft, ChevronLeft, ChevronRight, ThumbsUp, ThumbsDown, HelpCircle, RotateCcw, Key, Volume2 } from 'lucide-react';
+import { Upload, Link2, FileText, X, Sparkles, Check, ArrowLeft, ChevronLeft, ChevronRight, ThumbsUp, ThumbsDown, HelpCircle, RotateCcw, Key, Volume2, Clock } from 'lucide-react';
 import { generateCards, inferTitle } from '../../lib/gemini';
 import Button from '../ui/Button';
 import Loader from '../ui/Loader';
@@ -13,7 +13,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version || '4.0.370'}/build/pdf.worker.min.mjs`;
 
 interface GenerateFormProps {
-  onSaveDeck: (title: string, sourceType: 'text' | 'pdf' | 'url', sourcePreview: string, cards: any[]) => Promise<any>;
+  onSaveDeck: (title: string, sourceType: 'text' | 'pdf' | 'url', sourcePreview: string, cards: any[], timerLimit?: number) => Promise<any>;
   onPhaseChange?: (isReview: boolean) => void;
 }
 
@@ -69,6 +69,8 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
   const [showHint, setShowHint] = useState(false);
   const [cardResults, setCardResults] = useState<Map<number, 'right' | 'wrong'>>(new Map());
   const [reviewSelections, setReviewSelections] = useState<Map<number, string>>(new Map());
+  const [isTimerEnabled, setIsTimerEnabled] = useState(false);
+  const [timerLimit, setTimerLimit] = useState(15);
 
   // Drag and Drop State
   const [isDragActive, setIsDragActive] = useState(false);
@@ -396,7 +398,7 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
     else sourcePreview = urlInput;
 
     try {
-      await onSaveDeck(finalTitle, sourceType, sourcePreview, generatedCards);
+      await onSaveDeck(finalTitle, sourceType, sourcePreview, generatedCards, isTimerEnabled ? timerLimit : undefined);
       await refreshUsage();
       toast('Deck saved successfully!', 'success');
       // Reset to input phase
@@ -870,13 +872,72 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="w-full rounded-3xl border border-dashed border-white/10 bg-white/[0.01] p-8 flex flex-col items-center justify-center text-center min-h-[350px]"
+                    className="w-full rounded-3xl bg-[#161618] border border-white/5 p-8 flex flex-col justify-between min-h-[350px] shadow-2xl relative overflow-hidden text-left"
                   >
-                    <HelpCircle size={36} className="text-purple-400/50 mb-3 animate-pulse" />
-                    <h3 className="text-sm font-semibold text-[var(--text-secondary)]">Answer Pending</h3>
-                    <p className="text-xs text-[var(--text-muted)] mt-1.5 max-w-xs leading-relaxed">
-                      Select one of the multiple-choice options on the left to reveal the correct answer and detailed explanation.
-                    </p>
+                    <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-purple-500/50 to-transparent" />
+                    
+                    <div className="space-y-5">
+                      <div className="flex items-center gap-2">
+                        <Clock className="text-purple-400" size={18} />
+                        <span className="text-xs font-mono uppercase tracking-widest font-semibold text-[var(--text-primary)]">Quiz Timer Settings</span>
+                      </div>
+
+                      <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                        Configure a time limit for this MCQ quiz. The timer will start as soon as you begin studying and will auto-submit when the time runs out.
+                      </p>
+
+                      {/* Timer Enable Toggle */}
+                      <div className="flex items-center justify-between p-3.5 bg-white/[0.02] border border-white/5 rounded-xl">
+                        <div className="space-y-0.5">
+                          <span className="text-xs font-semibold text-[var(--text-primary)] block">Enable Time Limit</span>
+                          <span className="text-[10px] text-[var(--text-muted)] font-mono">Set a countdown for the quiz</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setIsTimerEnabled(!isTimerEnabled)}
+                          className={cn(
+                            "w-9 h-5 rounded-full transition-colors relative outline-none flex items-center p-0.5 border border-white/5 cursor-pointer",
+                            isTimerEnabled ? "bg-purple-600" : "bg-white/10"
+                          )}
+                        >
+                          <div className={cn(
+                            "w-3.5 h-3.5 rounded-full bg-white transition-transform",
+                            isTimerEnabled ? "translate-x-4" : "translate-x-0"
+                          )} />
+                        </button>
+                      </div>
+
+                      {/* Timer Input (only when enabled) */}
+                      {isTimerEnabled && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="space-y-2"
+                        >
+                          <label className="text-[10px] font-mono text-[var(--text-muted)] uppercase tracking-wider block">Duration (Minutes)</label>
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="number"
+                              min={1}
+                              max={60}
+                              value={timerLimit}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value);
+                                if (isNaN(val)) setTimerLimit(1);
+                                else setTimerLimit(Math.min(60, Math.max(1, val)));
+                              }}
+                              className="bg-[#0C0C0E] border border-white/5 focus:border-purple-500/30 rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none w-28 font-mono"
+                            />
+                            <span className="text-xs text-[var(--text-secondary)]">Max: 60 minutes</span>
+                          </div>
+                        </motion.div>
+                      )}
+                    </div>
+
+                    {/* Footer Hint */}
+                    <div className="pt-4 border-t border-white/5 text-[10px] font-mono text-[var(--text-muted)] leading-relaxed">
+                      💡 Select an option on the left at any time to view that card's explanation.
+                    </div>
                   </motion.div>
                 ) : (
                   <motion.div

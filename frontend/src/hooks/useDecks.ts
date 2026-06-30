@@ -83,13 +83,17 @@ export function useDecks(userId?: string) {
     title: string,
     sourceType: SourceType,
     sourcePreview: string,
-    cardsData: Array<{ front: string; back: string; hint: string; explanation: string; choices?: string[] }>
+    cardsData: Array<{ front: string; back: string; hint: string; explanation: string; choices?: string[] }>,
+    timerLimit?: number
   ): Promise<Deck | null> => {
     if (!userId) return null;
     setLoading(true);
     setError(null);
 
     const deckId = isDemoMode ? Math.random().toString(36).substring(2, 11) : '';
+    const finalPreview = timerLimit 
+      ? JSON.stringify({ preview: sourcePreview, timerLimit })
+      : sourcePreview;
 
     if (isDemoMode) {
       // Demo Mode
@@ -100,7 +104,7 @@ export function useDecks(userId?: string) {
           user_id: userId,
           title,
           source_type: sourceType,
-          source_preview: sourcePreview,
+          source_preview: finalPreview,
           card_count: cardsData.length,
           created_at: todayIso,
           updated_at: todayIso,
@@ -158,7 +162,7 @@ export function useDecks(userId?: string) {
           user_id: userId,
           title,
           source_type: sourceType,
-          source_preview: sourcePreview,
+          source_preview: finalPreview,
           card_count: cardsData.length,
         })
         .select('*')
