@@ -1,8 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none">
-  <!-- Black rounded square background -->
-  <rect width="48" height="48" rx="10" fill="#0C0C0E"/>
-  <!-- Fine subtle border to match premium UI -->
-  <rect width="46" height="46" x="1" y="1" rx="9" stroke="rgba(255, 255, 255, 0.15)" stroke-width="1"/>
-  <!-- White capital F logo in clean display typography -->
-  <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" fill="#FFFFFF" font-family="Space Grotesk, Inter, system-ui, sans-serif" font-weight="700" font-size="28" letter-spacing="-0.05em">F</text>
+  <defs>
+    <linearGradient id="purple-grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#A78BFA" />
+      <stop offset="100%" stop-color="#7C3AED" />
+    </linearGradient>
+  </defs>
+  <!-- Back Card Outline -->
+  <rect x="6" y="11" width="28" height="31" rx="5" stroke="#3F3F46" stroke-width="2" fill="none" />
+  <!-- Front Card (Purple/Violet Gradient) -->
+  <rect x="14" y="6" width="28" height="31" rx="5" fill="url(#purple-grad)" />
+  <!-- Letter F Overlay -->
+  <path d="M 22 31 L 22 15 C 22 13 23 11 25 11 L 32 11 M 22 21 L 29 21" stroke="#16132D" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
 </svg>

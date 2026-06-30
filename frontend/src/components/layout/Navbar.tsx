@@ -52,9 +52,20 @@ export function Navbar() {
         {/* Logo */}
         <Link 
           to={user ? "/dashboard" : "/"} 
-          className="font-display font-semibold text-xl tracking-tight hover:opacity-80 transition-opacity"
+          className="flex items-center gap-2 font-display font-semibold text-xl tracking-tight hover:opacity-80 transition-opacity text-[var(--text-primary)]"
         >
-          Flick
+          <svg className="w-6 h-6" viewBox="0 0 48 48" fill="none">
+            <defs>
+              <linearGradient id="purple-grad-nav" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#A78BFA" />
+                <stop offset="100%" stop-color="#7C3AED" />
+              </linearGradient>
+            </defs>
+            <rect x="6" y="11" width="28" height="31" rx="5" stroke="#3F3F46" stroke-width="2.2" fill="none" />
+            <rect x="14" y="6" width="28" height="31" rx="5" fill="url(#purple-grad-nav)" />
+            <path d="M 22 31 L 22 15 C 22 13 23 11 25 11 L 32 11 M 22 21 L 29 21" stroke="#16132D" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <span>Flick</span>
         </Link>
 
         {/* Navigation / User controls */}
