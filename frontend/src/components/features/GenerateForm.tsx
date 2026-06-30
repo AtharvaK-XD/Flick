@@ -338,6 +338,7 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
         setIsFlipped(false);
         setShowHint(false);
         setCardResults(new Map());
+        setReviewSelections(new Map());
         setPhase('review');
         onPhaseChange?.(true);
         toast(`Generated ${result.cards.length} cards!`, 'success');
