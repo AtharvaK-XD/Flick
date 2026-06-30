@@ -47,9 +47,16 @@ export function StudyMode({
   const [elapsedTime, setElapsedTime] = useState<number>(0);
   const [rightAnswers, setRightAnswers] = useState<number>(0);
   const [wrongAnswers, setWrongAnswers] = useState<number>(0);
-  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
-  const [isQuizStarted, setIsQuizStarted] = useState<boolean>(false);
+  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(true);
+  const [isQuizStarted, setIsQuizStarted] = useState<boolean>(true);
   const [timeExpired, setTimeExpired] = useState<boolean>(false);
+
+  // Sync timeLeft when timerLimit changes/resolves asynchronously
+  useEffect(() => {
+    if (timerLimit) {
+      setTimeLeft(timerLimit * 60);
+    }
+  }, [timerLimit]);
 
   const currentCard = cards[currentIndex];
   const progressPercent = cards.length > 0 ? ((currentIndex) / cards.length) * 100 : 0;
@@ -81,6 +88,7 @@ export function StudyMode({
   // Quiz Timer countdown/elapsed effect
   useEffect(() => {
     if (isFinished || studyStyle !== 'quiz' || !isQuizStarted) return;
+    if (timerLimit && timeLeft === 0) return;
 
     const timer = setInterval(() => {
       setElapsedTime(prev => prev + 1);
@@ -99,7 +107,7 @@ export function StudyMode({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timerLimit, isTimerRunning, isFinished, studyStyle, isQuizStarted]);
+  }, [timerLimit, isTimerRunning, isFinished, studyStyle, isQuizStarted, timeLeft]);
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
