@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, Link2, FileText, X, Sparkles, Check, ArrowLeft, ChevronLeft, ChevronRight, ThumbsUp, ThumbsDown, HelpCircle, RotateCcw, Key, Volume2, Mic, MicOff } from 'lucide-react';
+import { Upload, Link2, FileText, X, Sparkles, Check, ArrowLeft, ChevronLeft, ChevronRight, ThumbsUp, ThumbsDown, HelpCircle, RotateCcw, Key, Volume2 } from 'lucide-react';
 import { generateCards, inferTitle } from '../../lib/gemini';
 import Button from '../ui/Button';
 import Loader from '../ui/Loader';
@@ -157,95 +157,6 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
     };
   }, [phase]);
 
-  // Speech-To-Text Dictation States, Refs & Handlers
-  const [isListening, setIsListening] = useState(false);
-  const [micLang, setMicLang] = useState<'en-US' | 'hi-IN'>('en-US');
-  const recognitionRef = useRef<any>(null);
-  const baseTextRef = useRef('');
-  const textInputRef = useRef(textInput);
-
-  // Keep textInputRef synced with textInput state updates
-  useEffect(() => {
-    textInputRef.current = textInput;
-  }, [textInput]);
-
-  // Initialize Speech Recognition
-  useEffect(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      const rec = new SpeechRecognition();
-      rec.continuous = true;
-      rec.interimResults = true; // Use interim results for instant, real-time typing feedback
-      rec.lang = micLang;
-
-      rec.onstart = () => {
-        setIsListening(true);
-        // Save current textarea content as the baseline for this recording session
-        baseTextRef.current = textInputRef.current;
-      };
-
-      rec.onresult = (event: any) => {
-        let sessionTranscript = '';
-        for (let i = 0; i < event.results.length; ++i) {
-          if (event.results[i] && event.results[i][0]) {
-            sessionTranscript += event.results[i][0].transcript;
-          }
-        }
-        
-        const base = baseTextRef.current;
-        const separator = base.length > 0 && !base.endsWith(' ') ? ' ' : '';
-        setTextInput(base + separator + sessionTranscript.trim());
-      };
-
-      rec.onerror = (event: any) => {
-        console.error("Speech recognition error:", event.error);
-        if (event.error === 'not-allowed') {
-          toast("Microphone access denied. Please check your browser site permissions.", "error");
-        } else {
-          toast(`Speech recognition error: ${event.error}`, "error");
-        }
-        setIsListening(false);
-      };
-
-      rec.onend = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current = rec;
-
-      return () => {
-        try {
-          rec.stop();
-        } catch (e) {}
-      };
-    }
-  }, [micLang, toast]);
-
-  const toggleListening = () => {
-    const recognition = recognitionRef.current;
-    if (!recognition) {
-      toast("Speech recognition is not supported in this browser.", "error");
-      return;
-    }
-
-    if (isListening) {
-      recognition.stop();
-    } else {
-      try {
-        recognition.start();
-        toast("Microphone active. Start speaking!", "info");
-      } catch (err) {
-        console.error("Speech recognition start failed", err);
-      }
-    }
-  };
-
-  // Turn off mic when switching tabs or generating
-  useEffect(() => {
-    if (isListening && recognitionRef.current) {
-      recognitionRef.current.stop();
-    }
-  }, [activeTab, isGenerating]);
 
   // Handle PDF text extraction
   const extractPdfText = async (file: File): Promise<string> => {
@@ -1053,63 +964,13 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
           {/* Tab Content Panels */}
           <div className="min-h-[140px]">
             {activeTab === 'text' && (
-              <div className="animate-fade-up space-y-3 text-left">
-                <div className="relative">
-                  <textarea
-                    value={textInput}
-                    onChange={(e) => setTextInput(e.target.value)}
-                    placeholder="Paste your study notes or click the microphone to speak and dictate your notes..."
-                    className="input-theme w-full h-40 p-4 pr-12 text-sm placeholder-[var(--text-muted)] resize-none"
-                  />
-                  
-                  {/* Floating Speech-To-Text Controls inside the Textarea */}
-                  <div className="absolute right-3 bottom-3 flex items-center gap-2 z-20">
-                    {/* Language selector toggle */}
-                    {recognitionRef.current && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (isListening) {
-                            recognitionRef.current.stop();
-                            setIsListening(false);
-                          }
-                          setMicLang(prev => prev === 'en-US' ? 'hi-IN' : 'en-US');
-                        }}
-                        title="Switch speech recognition language (English / Hindi)"
-                        className="px-2 py-1.5 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 text-[10px] font-bold text-purple-400 hover:text-purple-300 transition-colors font-sans"
-                      >
-                        {micLang === 'en-US' ? 'EN' : 'HI'}
-                      </button>
-                    )}
-                    
-                    {/* Microphone toggle */}
-                    <button
-                      type="button"
-                      onClick={toggleListening}
-                      title={isListening ? "Stop listening" : "Dictate (Speech to Text)"}
-                      className={cn(
-                        "p-2 rounded-lg border transition-all duration-300 flex items-center justify-center",
-                        isListening 
-                          ? "bg-rose-500/20 text-rose-400 border-rose-500/30 animate-pulse shadow-md shadow-rose-900/10" 
-                          : "bg-white/5 text-[var(--text-secondary)] border-white/5 hover:bg-white/10 hover:text-[var(--text-primary)]"
-                      )}
-                    >
-                      {isListening ? <Mic size={15} /> : <MicOff size={15} />}
-                    </button>
-                  </div>
-                </div>
-                
-                {/* Listening Status Indicator */}
-                {isListening && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-2 text-[10px] font-mono text-purple-400 bg-purple-500/5 border border-purple-500/10 px-3 py-1.5 rounded-lg w-fit"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping shrink-0" />
-                    <span>Listening ({micLang === 'en-US' ? 'English' : 'Hindi'}). Speak to dictate notes...</span>
-                  </motion.div>
-                )}
+              <div className="animate-fade-up text-left">
+                <textarea
+                  value={textInput}
+                  onChange={(e) => setTextInput(e.target.value)}
+                  placeholder="Paste your study notes, an article, a Wikipedia section — anything..."
+                  className="input-theme w-full h-40 p-4 text-sm placeholder-[var(--text-muted)] resize-none"
+                />
               </div>
             )}
 
