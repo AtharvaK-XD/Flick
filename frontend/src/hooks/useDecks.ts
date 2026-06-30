@@ -83,7 +83,7 @@ export function useDecks(userId?: string) {
     title: string,
     sourceType: SourceType,
     sourcePreview: string,
-    cardsData: Array<{ front: string; back: string; hint: string; explanation: string }>
+    cardsData: Array<{ front: string; back: string; hint: string; explanation: string; choices?: string[] }>
   ): Promise<Deck | null> => {
     if (!userId) return null;
     setLoading(true);
@@ -107,20 +107,25 @@ export function useDecks(userId?: string) {
         };
 
         const todayStr = new Date().toISOString().split('T')[0];
-        const newCards: Card[] = cardsData.map((c) => ({
-          id: Math.random().toString(36).substring(2, 11),
-          deck_id: deckId,
-          user_id: userId,
-          front: c.front,
-          back: c.back,
-          explanation: c.explanation || null,
-          hint: c.hint || null,
-          next_review: todayStr,
-          interval_days: 1,
-          ease_factor: 2.5,
-          repetitions: 0,
-          created_at: todayIso,
-        }));
+        const newCards: Card[] = cardsData.map((c) => {
+          const exp = c.choices 
+            ? JSON.stringify({ explanation: c.explanation || '', choices: c.choices })
+            : (c.explanation || null);
+          return {
+            id: Math.random().toString(36).substring(2, 11),
+            deck_id: deckId,
+            user_id: userId,
+            front: c.front,
+            back: c.back,
+            explanation: exp,
+            hint: c.hint || null,
+            next_review: todayStr,
+            interval_days: 1,
+            ease_factor: 2.5,
+            repetitions: 0,
+            created_at: todayIso,
+          };
+        });
 
         // Save Deck
         const storedDecks = localStorage.getItem('flick_demo_decks') || '[]';
@@ -163,15 +168,20 @@ export function useDecks(userId?: string) {
 
       // 2. Insert Cards in batch
       const todayStr = new Date().toISOString().split('T')[0];
-      const cardsToInsert = cardsData.map(c => ({
-        deck_id: deck.id,
-        user_id: userId,
-        front: c.front,
-        back: c.back,
-        explanation: c.explanation || null,
-        hint: c.hint || null,
-        next_review: todayStr,
-      }));
+      const cardsToInsert = cardsData.map(c => {
+        const exp = c.choices 
+          ? JSON.stringify({ explanation: c.explanation || '', choices: c.choices })
+          : (c.explanation || null);
+        return {
+          deck_id: deck.id,
+          user_id: userId,
+          front: c.front,
+          back: c.back,
+          explanation: exp,
+          hint: c.hint || null,
+          next_review: todayStr,
+        };
+      });
 
       const { error: cardsError } = await supabase
         .from('cards')

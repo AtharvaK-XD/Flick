@@ -19,6 +19,7 @@ export interface Card {
   back: string;
   explanation: string | null;
   hint: string | null;
+  choices?: string[];
   next_review: string; // ISO date string (YYYY-MM-DD)
   interval_days: number;
   ease_factor: number;

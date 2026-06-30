@@ -5,6 +5,7 @@ import Button from '../ui/Button';
 import { CheckCircle, Sparkles, ArrowLeft, Zap } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '../../lib/utils';
 
 interface StudyModeProps {
   deckTitle: string;
@@ -30,8 +31,32 @@ export function StudyMode({
   const [edgeGlow, setEdgeGlow] = useState<string | null>(null);
   const [feedbacks, setFeedbacks] = useState<Array<{ id: string; text: string; colorClass: string }>>([]);
 
+  // MCQ Mode States
+  const hasMcqs = cards.some(c => c.choices && Array.isArray(c.choices) && c.choices.length > 0);
+  const [studyStyle, setStudyStyle] = useState<'flashcard' | 'quiz'>(hasMcqs ? 'quiz' : 'flashcard');
+  const [shuffledChoices, setShuffledChoices] = useState<string[]>([]);
+  const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
+  const [hasAnswered, setHasAnswered] = useState(false);
+
   const currentCard = cards[currentIndex];
   const progressPercent = cards.length > 0 ? ((currentIndex) / cards.length) * 100 : 0;
+
+  // Shuffle options on card load
+  useEffect(() => {
+    if (currentCard && currentCard.choices && Array.isArray(currentCard.choices)) {
+      const copy = [...currentCard.choices];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      setShuffledChoices(copy);
+    } else {
+      setShuffledChoices([]);
+    }
+    setSelectedChoice(null);
+    setHasAnswered(false);
+    setIsFlipped(false);
+  }, [currentIndex, currentCard]);
 
   const triggerFeedback = (quality: 0 | 1 | 2 | 3) => {
     const qualities = [
@@ -55,18 +80,23 @@ export function StudyMode({
     }, 600);
   };
 
-  // Keybindings
+  // Keyboard controls for Flashcard ratings
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isFinished) return;
 
       if (e.code === 'Space' || e.code === 'Enter') {
         e.preventDefault();
-        setIsFlipped((prev) => !prev);
+        if (studyStyle === 'flashcard') {
+          setIsFlipped((prev) => !prev);
+        } else if (studyStyle === 'quiz' && !hasAnswered) {
+          setIsFlipped(true);
+          setHasAnswered(true);
+        }
       } else if (e.code === 'Escape') {
         e.preventDefault();
         onClose();
-      } else if (isFlipped) {
+      } else if (isFlipped || (studyStyle === 'quiz' && hasAnswered)) {
         // Rating keys: 1, 2, 3, 4
         if (e.key === '1') {
           handleRate(0);
@@ -82,7 +112,41 @@ export function StudyMode({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isFlipped, currentIndex, isFinished]);
+  }, [isFlipped, currentIndex, isFinished, studyStyle, hasAnswered]);
+
+  // Keyboard controls for Quiz Option Selection (A, B, C, D)
+  useEffect(() => {
+    const handleQuizOptionKey = (e: KeyboardEvent) => {
+      if (isFinished || !currentCard || studyStyle !== 'quiz' || hasAnswered) return;
+
+      const key = e.key.toLowerCase();
+      if (key === 'a' || key === '1') {
+        if (shuffledChoices[0]) handleAnswer(shuffledChoices[0]);
+      } else if (key === 'b' || key === '2') {
+        if (shuffledChoices[1]) handleAnswer(shuffledChoices[1]);
+      } else if (key === 'c' || key === '3') {
+        if (shuffledChoices[2]) handleAnswer(shuffledChoices[2]);
+      } else if (key === 'd' || key === '4') {
+        if (shuffledChoices[3]) handleAnswer(shuffledChoices[3]);
+      }
+    };
+
+    window.addEventListener('keydown', handleQuizOptionKey);
+    return () => window.removeEventListener('keydown', handleQuizOptionKey);
+  }, [studyStyle, hasAnswered, shuffledChoices, isFinished, currentCard]);
+
+  const handleAnswer = (choice: string) => {
+    setSelectedChoice(choice);
+    setHasAnswered(true);
+    setIsFlipped(true); // Flip card to show answer
+
+    const isCorrect = choice === currentCard.back;
+    if (isCorrect) {
+      triggerFeedback(2); // Good (+10 XP)
+    } else {
+      triggerFeedback(0); // Again (Review soon)
+    }
+  };
 
   const handleRate = async (quality: 0 | 1 | 2 | 3) => {
     if (!currentCard) return;
@@ -192,7 +256,35 @@ export function StudyMode({
           <span>Leave study mode</span>
         </button>
 
-        <span className="text-xs font-mono text-[var(--text-secondary)]">
+        {/* Study Style Toggle (Flashcard vs Quiz) */}
+        {hasMcqs && !isFinished && (
+          <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-lg p-0.5">
+            <button
+              onClick={() => setStudyStyle('flashcard')}
+              className={cn(
+                "px-2.5 py-1 text-[10px] font-medium rounded transition-colors cursor-pointer",
+                studyStyle === 'flashcard' 
+                  ? "bg-purple-600 text-white font-semibold" 
+                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              )}
+            >
+              Flashcards
+            </button>
+            <button
+              onClick={() => setStudyStyle('quiz')}
+              className={cn(
+                "px-2.5 py-1 text-[10px] font-medium rounded transition-colors cursor-pointer",
+                studyStyle === 'quiz' 
+                  ? "bg-purple-600 text-white font-semibold" 
+                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              )}
+            >
+              Quiz (MCQ)
+            </button>
+          </div>
+        )}
+
+        <span className="text-xs font-mono text-[var(--text-secondary)] hidden md:inline">
           {deckTitle}
         </span>
 
@@ -202,10 +294,10 @@ export function StudyMode({
       </div>
 
       {/* Center Study Arena */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 relative z-10">
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 relative z-10 overflow-y-auto">
         {!isFinished ? (
-          <div className="w-full flex flex-col items-center gap-6 overflow-hidden">
-            <div className="w-full flex justify-center py-2">
+          <div className="w-full flex flex-col items-center gap-4 overflow-hidden max-w-[620px] mx-auto">
+            <div className="w-full flex justify-center py-1">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={currentIndex}
@@ -220,20 +312,83 @@ export function StudyMode({
                     back={currentCard.back}
                     hint={currentCard.hint}
                     isFlipped={isFlipped}
-                    onFlip={() => setIsFlipped(!isFlipped)}
+                    onFlip={() => {
+                      if (studyStyle === 'flashcard') {
+                        setIsFlipped(!isFlipped);
+                      }
+                    }}
                   />
                 </motion.div>
               </AnimatePresence>
             </div>
 
-            {!isFlipped ? (
+            {/* MCQ Quiz Options Grid */}
+            {studyStyle === 'quiz' && shuffledChoices.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full mt-2">
+                {shuffledChoices.map((choice, idx) => {
+                  const isCorrect = choice === currentCard.back;
+                  const isSelected = selectedChoice === choice;
+                  let btnStyle = "bg-surface border-[var(--border)] text-[var(--text-secondary)] hover:bg-white/[0.03]";
+                  
+                  if (hasAnswered) {
+                    if (isCorrect) {
+                      btnStyle = "bg-emerald-500/10 border-emerald-500/40 text-emerald-400 font-semibold shadow-[0_0_15px_rgba(16,185,129,0.15)]";
+                    } else if (isSelected) {
+                      btnStyle = "bg-rose-500/10 border-rose-500/40 text-rose-400 font-semibold shadow-[0_0_15px_rgba(244,63,94,0.15)]";
+                    }
+                  } else if (isSelected) {
+                    btnStyle = "bg-purple-500/10 border-purple-500/40 text-purple-400 border-purple-500/50";
+                  }
+                  
+                  return (
+                    <button
+                      key={idx}
+                      disabled={hasAnswered}
+                      onClick={() => handleAnswer(choice)}
+                      className={cn(
+                        "w-full text-left px-5 py-4 rounded-xl border text-sm transition-all duration-300 active:scale-[0.98] cursor-pointer",
+                        btnStyle
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className={cn(
+                          "w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono border transition-all duration-300",
+                          hasAnswered && isCorrect ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
+                          : hasAnswered && isSelected ? "bg-rose-500/20 border-rose-500/40 text-rose-400"
+                          : "bg-white/5 border-white/10 text-[var(--text-secondary)]"
+                        )}>
+                          {String.fromCharCode(65 + idx)}
+                        </span>
+                        <span className="flex-1 leading-snug">{choice}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {studyStyle === 'flashcard' && !isFlipped && (
               <p className="text-xs text-[var(--text-secondary)] font-mono animate-pulse mt-2">
                 Press [Space] or click card to flip
               </p>
-            ) : (
+            )}
+
+            {studyStyle === 'flashcard' && isFlipped && (
               <div className="text-xs text-[var(--text-secondary)] font-mono mt-2">
                 Press [1 - 4] on your keyboard to rate
               </div>
+            )}
+
+            {studyStyle === 'quiz' && !hasAnswered && (
+              <p className="text-xs text-[var(--text-secondary)] font-mono mt-2">
+                Select an option above (or press [A - D] / [1 - 4])
+              </p>
+            )}
+
+            {studyStyle === 'quiz' && hasAnswered && (
+              <p className="text-xs text-[var(--text-secondary)] font-mono mt-2">
+                Press [1 - 4] to adjust rating &amp; advance
+              </p>
             )}
           </div>
         ) : (
@@ -291,7 +446,7 @@ export function StudyMode({
       {/* Bottom Controls */}
       <div className="px-6 py-6 border-t border-[var(--border)] flex flex-col items-center bg-app min-h-[96px] justify-center relative z-10">
         <AnimatePresence mode="wait">
-          {!isFinished && isFlipped ? (
+          {!isFinished && (isFlipped || (studyStyle === 'quiz' && hasAnswered)) ? (
             <motion.div 
               key="rating-buttons"
               initial={{ opacity: 0, y: 15 }}
@@ -321,7 +476,12 @@ export function StudyMode({
               {/* Good Button */}
               <button
                 onClick={() => handleRate(2)}
-                className="flex flex-col items-center justify-center py-2.5 rounded-lg border border-purple-500/20 bg-purple-500/5 hover:bg-purple-500/10 hover:border-purple-500/40 text-purple-400 transition-all duration-300 active:scale-[0.96] cursor-pointer"
+                className={cn(
+                  "flex flex-col items-center justify-center py-2.5 rounded-lg border text-purple-400 transition-all duration-300 active:scale-[0.96] cursor-pointer",
+                  studyStyle === 'quiz' && selectedChoice === currentCard.back
+                    ? "border-purple-500 bg-purple-500/20 shadow-[0_0_12px_rgba(124,58,237,0.2)]"
+                    : "border-purple-500/20 bg-purple-500/5 hover:bg-purple-500/10 hover:border-purple-500/40"
+                )}
               >
                 <span className="text-xs font-semibold">Good</span>
                 <span className="text-[10px] font-mono text-purple-400/60 mt-0.5">[3]</span>
@@ -345,12 +505,18 @@ export function StudyMode({
               transition={{ duration: 0.2 }}
               className="w-full max-w-[500px] md:max-w-[620px] lg:max-w-[700px]"
             >
-              <Button
-                onClick={() => setIsFlipped(true)}
-                className="w-full py-3 text-sm font-semibold"
-              >
-                Reveal Answer
-              </Button>
+              {studyStyle === 'flashcard' ? (
+                <Button
+                  onClick={() => setIsFlipped(true)}
+                  className="w-full py-3 text-sm font-semibold"
+                >
+                  Reveal Answer
+                </Button>
+              ) : (
+                <div className="w-full py-3 text-center text-xs font-mono text-[var(--text-secondary)] border border-dashed border-white/10 rounded-xl bg-white/[0.01]">
+                  Select an option above to answer &amp; flip card
+                </div>
+              )}
             </motion.div>
           ) : (
             <motion.div

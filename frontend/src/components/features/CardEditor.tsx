@@ -10,7 +10,7 @@ interface CardEditorProps {
   card: Card;
   isExpanded: boolean;
   onToggleExpand: () => void;
-  onSave: (cardId: string, front: string, back: string, hint?: string | null) => Promise<boolean>;
+  onSave: (cardId: string, front: string, back: string, hint?: string | null, choices?: string[]) => Promise<boolean>;
   onDelete: (cardId: string) => Promise<boolean>;
 }
 
@@ -27,6 +27,10 @@ export function CardEditor({
   const [front, setFront] = useState(card.front);
   const [back, setBack] = useState(card.back);
   const [hint, setHint] = useState(card.hint || '');
+  const [choiceA, setChoiceA] = useState(card.choices?.[0] || '');
+  const [choiceB, setChoiceB] = useState(card.choices?.[1] || '');
+  const [choiceC, setChoiceC] = useState(card.choices?.[2] || '');
+  const [choiceD, setChoiceD] = useState(card.choices?.[3] || '');
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -36,8 +40,18 @@ export function CardEditor({
       toast('Front and back text cannot be empty.', 'error');
       return;
     }
+
+    const updatedChoices = card.choices 
+      ? [choiceA.trim(), choiceB.trim(), choiceC.trim(), choiceD.trim()] 
+      : undefined;
+
+    if (updatedChoices && !updatedChoices.includes(back.trim())) {
+      toast("The back (correct answer) must match one of the option choices exactly.", "error");
+      return;
+    }
+
     setIsSaving(true);
-    const success = await onSave(card.id, front.trim(), back.trim(), hint.trim() || null);
+    const success = await onSave(card.id, front.trim(), back.trim(), hint.trim() || null, updatedChoices);
     setIsSaving(false);
     if (success) {
       toast('Card updated successfully!', 'success');
@@ -161,6 +175,53 @@ export function CardEditor({
                   placeholder="Provide a nudge without giving it away"
                 />
               </div>
+
+              {/* MCQ Options Inputs */}
+              {card.choices && (
+                <div className="space-y-3.5 pt-2 border-t border-white/5">
+                  <span className="text-[10px] font-mono text-[var(--text-secondary)] uppercase tracking-wider block">
+                    Multiple Choice Options (The correct answer must match one of these exactly)
+                  </span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[9px] font-mono text-[var(--text-muted)] uppercase">Option A</label>
+                      <input
+                        type="text"
+                        value={choiceA}
+                        onChange={(e) => setChoiceA(e.target.value)}
+                        className="bg-[#0C0C0E] border border-white/5 focus:border-purple-500/30 rounded px-3 py-2 text-xs text-[var(--text-primary)] focus:outline-none"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[9px] font-mono text-[var(--text-muted)] uppercase">Option B</label>
+                      <input
+                        type="text"
+                        value={choiceB}
+                        onChange={(e) => setChoiceB(e.target.value)}
+                        className="bg-[#0C0C0E] border border-white/5 focus:border-purple-500/30 rounded px-3 py-2 text-xs text-[var(--text-primary)] focus:outline-none"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[9px] font-mono text-[var(--text-muted)] uppercase">Option C</label>
+                      <input
+                        type="text"
+                        value={choiceC}
+                        onChange={(e) => setChoiceC(e.target.value)}
+                        className="bg-[#0C0C0E] border border-white/5 focus:border-purple-500/30 rounded px-3 py-2 text-xs text-[var(--text-primary)] focus:outline-none"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[9px] font-mono text-[var(--text-muted)] uppercase">Option D</label>
+                      <input
+                        type="text"
+                        value={choiceD}
+                        onChange={(e) => setChoiceD(e.target.value)}
+                        className="bg-[#0C0C0E] border border-white/5 focus:border-purple-500/30 rounded px-3 py-2 text-xs text-[var(--text-primary)] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Spaced Repetition Stats (Monospace Info) */}
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[10px] font-mono text-[var(--text-muted)] pt-1 border-t border-white/5">

@@ -3,6 +3,22 @@ import { supabase, isDemoMode } from '../lib/supabase';
 import type { Card } from '../types';
 import { sm2 } from '../lib/sm2';
 
+function parseExplanationAndChoices(card: any): Card {
+  if (card && card.explanation && card.explanation.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(card.explanation);
+      if (parsed && typeof parsed === 'object' && parsed.choices) {
+        return {
+          ...card,
+          explanation: parsed.explanation || '',
+          choices: parsed.choices,
+        };
+      }
+    } catch (e) {}
+  }
+  return card;
+}
+
 export function useCards(deckId?: string) {
   const [cards, setCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(false);
@@ -19,7 +35,8 @@ export function useCards(deckId?: string) {
         const storedCards = localStorage.getItem('flick_demo_cards') || '[]';
         const parsedCards: Card[] = JSON.parse(storedCards);
         const filteredCards = deckId ? parsedCards.filter(c => c.deck_id === deckId) : parsedCards;
-        setCards(filteredCards);
+        const processedCards = filteredCards.map(parseExplanationAndChoices);
+        setCards(processedCards);
       } catch (err) {
         setError('Failed to fetch cards locally');
       } finally {
@@ -38,7 +55,9 @@ export function useCards(deckId?: string) {
       const { data, error: fetchError } = await query.order('created_at', { ascending: true });
 
       if (fetchError) throw fetchError;
-      setCards(data || []);
+      
+      const processedCards = (data || []).map(parseExplanationAndChoices);
+      setCards(processedCards);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch cards');
     } finally {
@@ -107,13 +126,14 @@ export function useCards(deckId?: string) {
           parsedCards[globalIndex] = updatedCard;
           localStorage.setItem('flick_demo_cards', JSON.stringify(parsedCards));
           
+          const parsedCard = parseExplanationAndChoices(updatedCard);
           // Update local state
           setCards(prev => {
             const copy = [...prev];
-            copy[cardIndex] = updatedCard;
+            copy[cardIndex] = parsedCard;
             return copy;
           });
-          return updatedCard;
+          return parsedCard;
         }
         return null;
       } catch (err) {
@@ -133,31 +153,44 @@ export function useCards(deckId?: string) {
 
       if (updateError) throw updateError;
 
+      const parsedCard = parseExplanationAndChoices(data);
       // Update local state
       setCards(prev => {
         const copy = [...prev];
-        copy[cardIndex] = data;
+        copy[cardIndex] = parsedCard;
         return copy;
       });
 
-      return data;
+      return parsedCard;
     } catch (err) {
       console.error('Error updating review metrics:', err);
       return null;
     }
   };
 
-  // Update card content (front/back/hint)
+  // Update card content (front/back/hint/choices)
   const updateCardContent = async (
     cardId: string,
     front: string,
     back: string,
-    hint?: string | null
+    hint?: string | null,
+    choices?: string[]
   ): Promise<boolean> => {
+    const cardToUpdate = cards.find(c => c.id === cardId);
+    if (!cardToUpdate) return false;
+
+    const activeChoices = choices || cardToUpdate.choices;
+    
+    // If it has choices, we must serialize both actual explanation text and choices inside the explanation text field
+    const explanationField = activeChoices
+      ? JSON.stringify({ explanation: cardToUpdate.explanation || '', choices: activeChoices })
+      : (cardToUpdate.explanation || null);
+
     const fieldsToUpdate = {
       front,
       back,
       hint: hint || null,
+      explanation: explanationField,
     };
 
     if (isDemoMode) {
@@ -167,14 +200,16 @@ export function useCards(deckId?: string) {
         const index = parsedCards.findIndex(c => c.id === cardId);
         
         if (index !== -1) {
-          parsedCards[index] = {
+          const updatedCard = {
             ...parsedCards[index],
             ...fieldsToUpdate,
           };
+          parsedCards[index] = updatedCard;
           localStorage.setItem('flick_demo_cards', JSON.stringify(parsedCards));
           
+          const parsedLocalCard = parseExplanationAndChoices(updatedCard);
           // Update state
-          setCards(prev => prev.map(c => c.id === cardId ? { ...c, ...fieldsToUpdate } : c));
+          setCards(prev => prev.map(c => c.id === cardId ? parsedLocalCard : c));
           return true;
         }
         return false;
@@ -192,7 +227,11 @@ export function useCards(deckId?: string) {
 
       if (updateError) throw updateError;
       
-      setCards(prev => prev.map(c => c.id === cardId ? { ...c, ...fieldsToUpdate } : c));
+      const parsedUpdatedCard = parseExplanationAndChoices({
+        ...cardToUpdate,
+        ...fieldsToUpdate
+      });
+      setCards(prev => prev.map(c => c.id === cardId ? parsedUpdatedCard : c));
       return true;
     } catch (err) {
       console.error('Error updating card content:', err);

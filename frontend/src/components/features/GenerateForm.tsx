@@ -30,6 +30,8 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
   // Title & Card Count
   const [title, setTitle] = useState('');
   const [cardCount, setCardCount] = useState<number>(10);
+  const [generationMode, setGenerationMode] = useState<'flashcard' | 'mcq'>('flashcard');
+  const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   
   // Inputs
   const [textInput, setTextInput] = useState('');
@@ -41,13 +43,18 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
   // Generation States
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStep, setGenerationStep] = useState('');
-  const [generatedCards, setGeneratedCards] = useState<Array<{ front: string; back: string; hint: string; explanation: string }>>([]);
+  const [generatedCards, setGeneratedCards] = useState<Array<{ front: string; back: string; hint: string; explanation: string; choices?: string[] }>>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isExtractingPdf, setIsExtractingPdf] = useState(false);
   const [isQuotaExceeded, setIsQuotaExceeded] = useState(false);
   const [tempApiKey, setTempApiKey] = useState('');
   const [lastContent, setLastContent] = useState('');
   const [selectedModel, setSelectedModel] = useState<string>('gemini-2.5-flash');
+
+  // Reset selected choice when card index changes
+  useEffect(() => {
+    setSelectedChoice(null);
+  }, [currentCardIndex]);
 
   // Helper to identify models with 15 card limit
   const isModelLimited = (modelId: string) => {
@@ -322,7 +329,7 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
         : (localStorage.getItem('flick_custom_gemini_key') || undefined);
         
       setGenerationStep('Building cards...');
-      const result = await generateCards(contentToProcess, cardCount, customKey, selectedModel);
+      const result = await generateCards(contentToProcess, cardCount, customKey, selectedModel, generationMode);
       
       if (result.cards && result.cards.length > 0) {
         recordGeneration(result.cards.length);
@@ -528,6 +535,48 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
                 {currentCard.front}
               </h2>
             </div>
+
+            {currentCard.choices && (
+              <div className="grid grid-cols-1 gap-2.5 mt-2">
+                {currentCard.choices.map((choice, idx) => {
+                  const isCorrect = choice === currentCard.back;
+                  const isSelected = selectedChoice === choice;
+                  let btnStyle = "bg-white/[0.02] border-white/5 text-[var(--text-secondary)] hover:bg-white/[0.05]";
+                  if (isFlipped) {
+                    if (isCorrect) {
+                      btnStyle = "bg-emerald-500/10 border-emerald-500/30 text-emerald-400";
+                    } else if (isSelected) {
+                      btnStyle = "bg-rose-500/10 border-rose-500/30 text-rose-400";
+                    }
+                  } else if (isSelected) {
+                    btnStyle = "bg-purple-500/10 border-purple-500/30 text-purple-400";
+                  }
+                  
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        if (isFlipped) return;
+                        setSelectedChoice(choice);
+                        setIsFlipped(true);
+                        markCard(isCorrect ? 'right' : 'wrong');
+                      }}
+                      className={cn(
+                        "w-full text-left px-4 py-3 rounded-xl border text-sm font-medium transition-all duration-200",
+                        btnStyle
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="w-5 h-5 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-mono text-[var(--text-muted)]">
+                          {String.fromCharCode(65 + idx)}
+                        </span>
+                        <span className="flex-1 leading-snug">{choice}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             <div className="h-px bg-white/5" />
 
@@ -1079,7 +1128,7 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
           </div>
 
           {/* Form Settings Controls */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-4 border-t border-white/5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-4 border-t border-white/5">
             {/* Title Input */}
             <div className="flex flex-col gap-2 text-left">
               <label className="text-xs font-mono text-[var(--text-secondary)] uppercase">
@@ -1094,10 +1143,46 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
               />
             </div>
 
-            {/* Card Count Selector */}
+            {/* Generation Mode Selector */}
             <div className="flex flex-col gap-2 text-left">
               <label className="text-xs font-mono text-[var(--text-secondary)] uppercase">
-                Number of Cards
+                Generation Mode
+              </label>
+              <div className="flex items-center gap-2 bg-app border border-[var(--border)] rounded-lg p-1 relative">
+                {(['flashcard', 'mcq'] as const).map((mode) => {
+                  const isActive = generationMode === mode;
+                  return (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setGenerationMode(mode)}
+                      className={cn(
+                        "relative flex-1 py-1.5 text-xs font-medium rounded-md transition-all duration-200 z-10 focus:outline-none",
+                        isActive
+                          ? "text-white"
+                          : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                      )}
+                    >
+                      <span className="relative z-10">
+                        {mode === 'flashcard' ? 'Flashcards' : 'MCQs (Quiz)'}
+                      </span>
+                      {isActive && (
+                        <motion.div
+                          layoutId="activeGenModePill"
+                          className="absolute inset-0 bg-purple-600 rounded-md z-0"
+                          transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Card/MCQ Count Selector */}
+            <div className="flex flex-col gap-2 text-left">
+              <label className="text-xs font-mono text-[var(--text-secondary)] uppercase">
+                {generationMode === 'mcq' ? 'Number of MCQs' : 'Number of Cards'}
               </label>
               <div className="flex items-center gap-2 bg-app border border-[var(--border)] rounded-lg p-1 relative">
                 {[5, 10, 15, 20].map((num) => {
@@ -1175,7 +1260,7 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
             ) : (
               <>
                 <Sparkles size={16} />
-                <span>Generate flashcards</span>
+                <span>{generationMode === 'mcq' ? 'Generate MCQs' : 'Generate flashcards'}</span>
               </>
             )}
           </Button>

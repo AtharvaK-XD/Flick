@@ -5,6 +5,7 @@ interface GeneratedCard {
   back: string;
   hint: string;
   explanation: string;
+  choices?: string[];
 }
 
 export interface GenerationResult {
@@ -32,6 +33,20 @@ function adjustCardCount(parsed: any, targetCount: number): any {
   return parsed;
 }
 
+function ensureChoices(cards: GeneratedCard[]): GeneratedCard[] {
+  return cards.map(c => {
+    if (!c.choices || !Array.isArray(c.choices) || c.choices.length < 4) {
+      c.choices = [
+        c.back,
+        c.back + " (Alternative Option)",
+        "An unrelated context concept",
+        "None of the above options are correct"
+      ];
+    }
+    return c;
+  });
+}
+
 /**
  * Generates flashcards from a text block.
  * 
@@ -42,7 +57,8 @@ export async function generateCards(
   content: string,
   count: number = 10,
   customApiKey?: string,
-  model: string = 'gemini-2.5-flash'
+  model: string = 'gemini-2.5-flash',
+  generationMode: 'flashcard' | 'mcq' = 'flashcard'
 ): Promise<GenerationResult> {
   const parsedCount = Number(count) || 10;
   let lastError: any = null;
@@ -57,7 +73,35 @@ export async function generateCards(
     : (customApiKey || import.meta.env.VITE_GEMINI_API_KEY);
 
   if (activeApiKey) {
-    const prompt = `You are a flashcard generator. Given the content below, generate exactly ${parsedCount} high-quality flashcards.
+    const prompt = generationMode === 'mcq'
+      ? `You are a multiple choice question (MCQ) quiz generator. Given the content below, generate exactly ${parsedCount} high-quality MCQs.
+
+Rules:
+- Each question must have a clear, specific question on the "front"
+- The "back" must be the exact correct answer.
+- You must generate exactly 4 options in the "choices" array. One of these options must exactly match the correct answer in "back". The other 3 options must be plausible distractors (wrong answers).
+- The "explanation" should explain why the correct choice is right and why the other options are wrong (2-4 sentences max).
+- Include a one-sentence hint that gives a nudge without giving away the correct answer.
+- Questions should test understanding, not just memorization of exact phrases.
+- Do not generate duplicate or overly similar questions.
+- Return ONLY valid JSON, no markdown, no explanation, no backticks.
+
+Return this exact JSON structure:
+{
+  "cards": [
+    { 
+      "front": "question here", 
+      "back": "exact correct option text here", 
+      "choices": ["correct option", "wrong option 1", "wrong option 2", "wrong option 3"],
+      "explanation": "why correct option is right...", 
+      "hint": "hint here" 
+    }
+  ]
+}
+
+Content to process:
+${content.slice(0, 15000)}`
+      : `You are a flashcard generator. Given the content below, generate exactly ${parsedCount} high-quality flashcards.
 
 Rules:
 - Each flashcard must have a clear, specific question on the front
@@ -161,7 +205,11 @@ ${content.slice(0, 15000)}`;
       // Strip markdown formatting if any
       const cleaned = rawText.replace(/```json|```/g, '').trim();
       const parsed = JSON.parse(cleaned);
-      return adjustCardCount(parsed, parsedCount);
+      const adjusted = adjustCardCount(parsed, parsedCount);
+      if (generationMode === 'mcq') {
+        adjusted.cards = ensureChoices(adjusted.cards);
+      }
+      return adjusted;
     } catch (clientErr: any) {
       console.warn("Client-side generation failed:", clientErr);
       lastError = clientErr;
@@ -196,12 +244,16 @@ ${content.slice(0, 15000)}`;
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
-        body: JSON.stringify({ content, count: parsedCount, model }),
+        body: JSON.stringify({ content, count: parsedCount, model, mode: generationMode }),
       });
 
       if (response.ok) {
         const parsed = await response.json();
-        return adjustCardCount(parsed, parsedCount);
+        const adjusted = adjustCardCount(parsed, parsedCount);
+        if (generationMode === 'mcq') {
+          adjusted.cards = ensureChoices(adjusted.cards);
+        }
+        return adjusted;
       }
 
       const errText = await response.text();
@@ -220,8 +272,8 @@ ${content.slice(0, 15000)}`;
       const isSupabaseNetworkError = 
         supabaseErr && 
         (supabaseErr.message === 'Failed to fetch' || 
-         supabaseErr.name === 'TypeError' ||
-         String(supabaseErr).includes('Failed to fetch'));
+        supabaseErr.name === 'TypeError' ||
+        String(supabaseErr).includes('Failed to fetch'));
 
       if (lastError && isSupabaseNetworkError) {
         // Keep the existing Gemini API error as lastError
@@ -274,6 +326,14 @@ ${content.slice(0, 15000)}`;
         hint: "They render on the server and send serialized JSON UI structures, not HTML."
       }
     ];
+
+    if (generationMode === 'mcq') {
+      cards[0].choices = ["Vite is a modern frontend build tool that provides extremely fast HMR using native ES modules.", "Vite is a database server designed to replace PostgreSQL.", "Vite is a CSS library built by the creator of Tailwind.", "Vite is a desktop runtime environment like Node.js."];
+      cards[1].choices = ["Concurrent Mode allows React to prepare multiple versions of the UI simultaneously, improving responsiveness.", "Concurrent Mode is a styling engine built into React components.", "Concurrent Mode disables the virtual DOM rendering cycle completely.", "Concurrent Mode allows running client components directly on the backend database server."];
+      cards[2].choices = ["useEffect lets you perform side effects in functional components after rendering.", "useEffect is used to store persistent state across browser reloads.", "useEffect is a styling hook used to apply layout themes to Tailwind components.", "useEffect forces a synchronous component re-render on mouse hover events."];
+      cards[3].choices = ["The Virtual DOM is an in-memory representation of the UI that React syncs with the real DOM efficiently.", "The Virtual DOM is a hardware-accelerated rendering card inside the client machine.", "The Virtual DOM is a security protocol that blocks cross-site script injections.", "The Virtual DOM is a cloud database server for caching React state variables."];
+      cards[4].choices = ["RSCs are components that render entirely on the server, reducing client bundle size.", "RSCs are client-side styling hooks designed to handle desktop user interactions.", "RSCs are database tables stored in Supabase schemas.", "RSCs are web socket connections created to sync state across browser tabs."];
+    }
   } else if (textLower.includes('spaced repetition') || textLower.includes('sm-2') || textLower.includes('forgetting') || textLower.includes('algorithm')) {
     cards = [
       {
@@ -301,6 +361,13 @@ ${content.slice(0, 15000)}`;
         hint: "Formulated by Hermann Ebbinghaus."
       }
     ];
+
+    if (generationMode === 'mcq') {
+      cards[0].choices = ["SM-2 is a spaced repetition algorithm that calculates review intervals based on recall ease.", "SM-2 is a styling library for rendering 3D graphics on cards.", "SM-2 is a database indexing algorithm that speeds up query lookups.", "SM-2 is a load balancing system for routing cloud edge network traffic."];
+      cards[1].choices = ["The Ease Factor controls how quickly review intervals grow — higher means shown less frequently.", "The Ease Factor measures how quickly a card's visual animations render in the viewport.", "The Ease Factor represents the count of total active cards inside the deck grid.", "The Ease Factor determines the rating color theme of the rating buttons."];
+      cards[2].choices = ["Spaced Repetition is a learning technique that schedules reviews at increasing intervals to maximize retention.", "Spaced Repetition is a styling technique that adds margins between elements in layout grids.", "Spaced Repetition is a database replication method across multiple availability zones.", "Spaced Repetition is a network handshake protocol that retries failed fetch requests."];
+      cards[3].choices = ["The forgetting curve shows how memory retention declines exponentially over time without review.", "The forgetting curve is a CSS layout animation path for fading text layers.", "The forgetting curve displays the error rate trends of the Gemini API models.", "The forgetting curve is a chart of daily active users on the Flick platform."];
+    }
   } else {
     // Generic sentence parsing mock builder
     const sentences = content
@@ -360,8 +427,11 @@ ${content.slice(0, 15000)}`;
     })));
   }
 
+  const finalCards = resultCards.slice(0, parsedCount);
+  const processedFallbackCards = generationMode === 'mcq' ? ensureChoices(finalCards) : finalCards;
+
   return {
-    cards: resultCards.slice(0, parsedCount),
+    cards: processedFallbackCards,
     title: inferTitle(content)
   };
 }
