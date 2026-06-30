@@ -71,6 +71,7 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
   const [cardResults, setCardResults] = useState<Map<number, 'right' | 'wrong'>>(new Map());
   const [reviewSelections, setReviewSelections] = useState<Map<number, string>>(new Map());
   const [timerLimit, setTimerLimit] = useState(15);
+  const [isTimerSaved, setIsTimerSaved] = useState(false);
 
   // Drag and Drop State
   const [isDragActive, setIsDragActive] = useState(false);
@@ -866,43 +867,72 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
           {currentCard.choices && (
             <div className="order-1 lg:order-2 w-full space-y-6">
               {/* Quiz Timer Settings & Ring (Persistent) */}
-              <div className="w-full rounded-3xl bg-[#161618] border border-white/5 p-6 shadow-2xl relative overflow-hidden text-left">
+              <div className="w-full rounded-3xl bg-[#161618] border border-white/5 p-8 shadow-2xl relative overflow-hidden text-center">
                 <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-purple-500/50 to-transparent" />
                 
-                <div className="flex flex-col md:flex-row items-center gap-6">
+                <div className="flex flex-col items-center gap-6">
                   {/* Timer Ring Preview (updates in real-time) */}
                   <TimerRing
                     timeLeft={timerLimit * 60}
                     totalDuration={timerLimit * 60}
                     label="Minutes Limit"
-                    className="shrink-0 scale-90"
+                    className="shrink-0"
                   />
 
-                  <div className="flex-1 space-y-4 w-full">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
+                  <div className="space-y-4 w-full text-left">
+                    <div className="space-y-1 text-center">
+                      <div className="flex items-center justify-center gap-2">
                         <Clock className="text-purple-400" size={16} />
                         <h3 className="text-xs font-mono uppercase tracking-widest font-semibold text-[var(--text-primary)]">Quiz Time Limit</h3>
                       </div>
-                      <p className="text-[11px] text-[var(--text-secondary)] leading-normal">
+                      <p className="text-[11px] text-[var(--text-secondary)] leading-normal max-w-sm mx-auto">
                         Choose a duration up to 60 mins. This ring represents the countdown timer you will face during the quiz.
                       </p>
                     </div>
 
                     {/* Timer limit selector (direct, no toggle) */}
-                    <div className="space-y-1.5">
+                    <div className="space-y-2 max-w-sm mx-auto">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase tracking-wider">Minutes</span>
-                        <span className="text-[10px] font-mono text-purple-400">{timerLimit}m</span>
+                        <span className="text-[10px] font-mono text-purple-400 font-bold">{timerLimit}m</span>
                       </div>
                       <input
                         type="range"
                         min={1}
                         max={60}
                         value={timerLimit}
-                        onChange={(e) => setTimerLimit(Math.min(60, Math.max(1, parseInt(e.target.value) || 1)))}
+                        onChange={(e) => {
+                          setTimerLimit(Math.min(60, Math.max(1, parseInt(e.target.value) || 1)));
+                          setIsTimerSaved(false);
+                        }}
                         className="w-full accent-purple-500 h-1 bg-white/5 rounded-lg appearance-none cursor-pointer"
                       />
+                    </div>
+
+                    {/* Save Timer Button */}
+                    <div className="pt-2 flex justify-center">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsTimerSaved(true);
+                          toast(`Quiz timer set to ${timerLimit} minutes!`, 'success');
+                        }}
+                        className={cn(
+                          "px-6 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 active:scale-[0.97] cursor-pointer flex items-center gap-1.5 border w-full max-w-sm justify-center",
+                          isTimerSaved
+                            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+                            : "bg-purple-600 border-purple-500 hover:bg-purple-500 hover:border-purple-400 text-white"
+                        )}
+                      >
+                        {isTimerSaved ? (
+                          <>
+                            <Check size={13} />
+                            <span>Timer Saved</span>
+                          </>
+                        ) : (
+                          <span>Save Timer</span>
+                        )}
+                      </button>
                     </div>
                   </div>
                 </div>

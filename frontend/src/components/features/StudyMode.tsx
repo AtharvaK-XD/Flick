@@ -3,7 +3,7 @@ import type { Card } from '../../types';
 import { FlipCard } from '../ui/FlipCard';
 import TimerRing from '../ui/TimerRing';
 import Button from '../ui/Button';
-import { CheckCircle, Sparkles, ArrowLeft, Zap, Clock } from 'lucide-react';
+import { CheckCircle, Sparkles, ArrowLeft, Zap, Clock, Play, Download } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
@@ -47,7 +47,8 @@ export function StudyMode({
   const [elapsedTime, setElapsedTime] = useState<number>(0);
   const [rightAnswers, setRightAnswers] = useState<number>(0);
   const [wrongAnswers, setWrongAnswers] = useState<number>(0);
-  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(!!timerLimit);
+  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
+  const [isQuizStarted, setIsQuizStarted] = useState<boolean>(false);
   const [timeExpired, setTimeExpired] = useState<boolean>(false);
 
   const currentCard = cards[currentIndex];
@@ -71,9 +72,15 @@ export function StudyMode({
     setShowQuizHint(false);
   }, [currentIndex, currentCard]);
 
+  const startQuiz = () => {
+    if (isQuizStarted) return;
+    setIsQuizStarted(true);
+    setIsTimerRunning(true);
+  };
+
   // Quiz Timer countdown/elapsed effect
   useEffect(() => {
-    if (isFinished || studyStyle !== 'quiz') return;
+    if (isFinished || studyStyle !== 'quiz' || !isQuizStarted) return;
 
     const timer = setInterval(() => {
       setElapsedTime(prev => prev + 1);
@@ -92,7 +99,7 @@ export function StudyMode({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timerLimit, isTimerRunning, isFinished, studyStyle]);
+  }, [timerLimit, isTimerRunning, isFinished, studyStyle, isQuizStarted]);
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -175,6 +182,7 @@ export function StudyMode({
   }, [studyStyle, hasAnswered, shuffledChoices, isFinished, currentCard]);
 
   const handleAnswer = (choice: string) => {
+    startQuiz();
     setSelectedChoice(choice);
     setHasAnswered(true);
 
@@ -234,6 +242,46 @@ export function StudyMode({
     } finally {
       setIsSavingStats(false);
     }
+  };
+
+  const downloadResults = () => {
+    const attempted = rightAnswers + wrongAnswers;
+    const unattempted = cards.length - attempted;
+    const accuracy = cards.length > 0 ? Math.round((rightAnswers / cards.length) * 100) : 0;
+    const timeStr = `${Math.floor(elapsedTime / 60)}m ${elapsedTime % 60}s`;
+
+    let md = `# Flick Quiz Results - ${deckTitle}\n\n`;
+    md += `Date: ${new Date().toLocaleString()}\n`;
+    md += `Time Limit Configured: ${timerLimit ? `${timerLimit} minutes` : 'None'}\n`;
+    md += `Time Taken: ${timeStr}\n`;
+    md += `Status: ${timeExpired ? 'Time Limit Expired' : 'Completed'}\n\n`;
+    
+    md += `## Score Summary\n`;
+    md += `- **Right Answers**: ${rightAnswers} / ${cards.length}\n`;
+    md += `- **Wrong Answers**: ${wrongAnswers} / ${cards.length}\n`;
+    md += `- **Unattempted**: ${unattempted} / ${cards.length}\n`;
+    md += `- **Overall Accuracy**: ${accuracy}%\n\n`;
+    
+    md += `## Detailed Question Report\n\n`;
+    cards.forEach((card, idx) => {
+      md += `### Question ${idx + 1}\n`;
+      md += `**Question**: ${card.front}\n`;
+      md += `**Correct Answer**: ${card.back}\n`;
+      if (card.explanation) {
+        md += `**Explanation**: ${card.explanation}\n`;
+      }
+      md += `\n---\n\n`;
+    });
+
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `flick-quiz-${deckTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-results.md`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Calculate average next interval for display
@@ -476,14 +524,37 @@ export function StudyMode({
                     timeLeft={timerLimit ? timeLeft : elapsedTime}
                     totalDuration={timerLimit ? timerLimit * 60 : elapsedTime}
                     isCountingUp={!timerLimit}
-                    label={timerLimit ? "Remaining" : "Elapsed"}
+                    label={!isQuizStarted ? "Ready" : timerLimit ? "Remaining" : "Elapsed"}
                   />
 
-                  <p className="text-[11px] text-[var(--text-muted)] font-mono max-w-[240px] mt-6 leading-relaxed">
-                    {timerLimit 
-                      ? "Timer runs persistently across all cards. Auto-submits on expiration."
-                      : "Time spent is tracked to measure your recall speed."}
-                  </p>
+                  {!isQuizStarted ? (
+                    <div className="mt-6 w-full space-y-3">
+                      <p className="text-[11px] text-[var(--text-muted)] font-mono max-w-[240px] mx-auto leading-relaxed">
+                        The timer is currently paused. Click below or choose an option on the left to start.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={startQuiz}
+                        className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-xs font-semibold bg-purple-600 border border-purple-500 hover:bg-purple-500 hover:border-purple-400 text-white transition-all duration-200 active:scale-[0.97] cursor-pointer shadow-lg shadow-purple-500/20"
+                      >
+                        <Play size={14} className="fill-white text-white" />
+                        <span>Start Quiz Timer</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="mt-6 w-full space-y-3">
+                      <p className="text-[11px] text-[var(--text-muted)] font-mono max-w-[240px] mx-auto leading-relaxed">
+                        Timer is active. Select options on the left to complete your quiz.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleSessionComplete}
+                        className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-xs font-semibold bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 transition-all duration-200 active:scale-[0.97] cursor-pointer"
+                      >
+                        <span>End Quiz &amp; View Report</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -540,18 +611,22 @@ export function StudyMode({
                 </div>
 
                 <div className="bg-[#131315] border border-white/5 rounded-2xl p-5 space-y-4 text-left">
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="text-center p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
-                      <span className="text-[9px] text-emerald-400/70 font-mono uppercase tracking-wider block mb-1">Right</span>
-                      <span className="text-xl font-bold text-emerald-400 font-mono">{rightAnswers}</span>
+                  <div className="grid grid-cols-4 gap-2">
+                    <div className="text-center p-2.5 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
+                      <span className="text-[8px] text-emerald-400/70 font-mono uppercase tracking-wider block mb-0.5">Right</span>
+                      <span className="text-lg font-bold text-emerald-400 font-mono">{rightAnswers}</span>
                     </div>
-                    <div className="text-center p-3 rounded-xl bg-rose-500/5 border border-rose-500/10">
-                      <span className="text-[9px] text-rose-400/70 font-mono uppercase tracking-wider block mb-1">Wrong</span>
-                      <span className="text-xl font-bold text-rose-400 font-mono">{wrongAnswers}</span>
+                    <div className="text-center p-2.5 rounded-xl bg-rose-500/5 border border-rose-500/10">
+                      <span className="text-[8px] text-rose-400/70 font-mono uppercase tracking-wider block mb-0.5">Wrong</span>
+                      <span className="text-lg font-bold text-rose-400 font-mono">{wrongAnswers}</span>
                     </div>
-                    <div className="text-center p-3 rounded-xl bg-purple-500/5 border border-purple-500/10">
-                      <span className="text-[9px] text-purple-400/70 font-mono uppercase tracking-wider block mb-1">Time</span>
-                      <span className="text-sm font-bold text-purple-400 font-mono block mt-1.5">
+                    <div className="text-center p-2.5 rounded-xl bg-amber-500/5 border border-amber-500/10">
+                      <span className="text-[8px] text-amber-400/70 font-mono uppercase tracking-wider block mb-0.5">Unattempt</span>
+                      <span className="text-lg font-bold text-amber-400 font-mono">{cards.length - (rightAnswers + wrongAnswers)}</span>
+                    </div>
+                    <div className="text-center p-2.5 rounded-xl bg-purple-500/5 border border-purple-500/10">
+                      <span className="text-[8px] text-purple-400/70 font-mono uppercase tracking-wider block mb-0.5">Time</span>
+                      <span className="text-xs font-bold text-purple-400 font-mono block mt-1">
                         {Math.floor(elapsedTime / 60)}m {elapsedTime % 60}s
                       </span>
                     </div>
@@ -615,14 +690,26 @@ export function StudyMode({
               </>
             )}
 
-            <Button
-              onClick={onClose}
-              className="w-full flex items-center justify-center gap-1.5"
-              loading={isSavingStats}
-            >
-              <Sparkles size={14} />
-              <span>Return to Dashboard</span>
-            </Button>
+            <div className="flex flex-col gap-2.5 w-full">
+              {studyStyle === 'quiz' && (
+                <button
+                  type="button"
+                  onClick={downloadResults}
+                  className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-xs font-semibold bg-purple-600 border border-purple-500 hover:bg-purple-500 hover:border-purple-400 text-white transition-all duration-200 active:scale-[0.97] cursor-pointer shadow-lg shadow-purple-500/10"
+                >
+                  <Download size={14} />
+                  <span>Download Quiz Results</span>
+                </button>
+              )}
+              <Button
+                onClick={onClose}
+                className="w-full flex items-center justify-center gap-1.5"
+                loading={isSavingStats}
+              >
+                <Sparkles size={14} />
+                <span>Return to Dashboard</span>
+              </Button>
+            </div>
           </motion.div>
         )}
       </div>

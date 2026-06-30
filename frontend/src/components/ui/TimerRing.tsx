@@ -21,8 +21,8 @@ export function TimerRing({
       ? Math.max(0, Math.min(1, timeLeft / totalDuration)) 
       : 1;
 
-  const radius = 80;
-  const strokeDasharray = 2 * Math.PI * radius; // ~502.65
+  const radius = 96;
+  const strokeDasharray = 2 * Math.PI * radius; // ~603.18
   const strokeDashoffset = strokeDasharray * (1 - percentRemaining);
 
   const minutes = Math.floor(timeLeft / 60);
@@ -44,45 +44,45 @@ export function TimerRing({
         }
       `}</style>
 
-      <div className="relative w-48 h-48 flex items-center justify-center">
+      <div className="relative w-56 h-56 flex items-center justify-center">
         {/* SVG Progress Ring */}
-        <svg className="w-full h-full transform -rotate-90">
+        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 220 220">
           {/* Outer Dash Compass Ring (rotating) */}
           <circle
-            cx="96"
-            cy="96"
-            r="88"
-            className="stroke-purple-500/10 fill-none animate-slow-spin-timer"
+            cx="110"
+            cy="110"
+            r="104"
+            className="stroke-purple-500/15 fill-none animate-slow-spin-timer"
             strokeWidth="1.5"
             strokeDasharray="6, 12"
           />
 
           {/* Background Track Circle */}
           <circle
-            cx="96"
-            cy="96"
-            r="80"
+            cx="110"
+            cy="110"
+            r="96"
             className="stroke-white/[0.03] fill-none"
-            strokeWidth="9"
+            strokeWidth="10"
           />
 
           {/* Active Progress Circle */}
           <circle
-            cx="96"
-            cy="96"
-            r="80"
+            cx="110"
+            cy="110"
+            r="96"
             className={cn(
               "fill-none transition-all duration-1000 ease-linear",
               isLowTime ? "stroke-rose-500" : "stroke-purple-500"
             )}
-            strokeWidth="9"
+            strokeWidth="10"
             strokeDasharray={strokeDasharray}
             strokeDashoffset={strokeDashoffset}
             strokeLinecap="round"
             style={{
               filter: isLowTime 
-                ? 'drop-shadow(0 0 8px rgba(244,63,94,0.4))' 
-                : 'drop-shadow(0 0 8px rgba(124,58,237,0.3))'
+                ? 'drop-shadow(0 0 10px rgba(244,63,94,0.45))' 
+                : 'drop-shadow(0 0 10px rgba(124,58,237,0.35))'
             }}
           />
         </svg>
@@ -90,7 +90,7 @@ export function TimerRing({
         {/* Center Text Panel */}
         <div className="absolute flex flex-col items-center justify-center text-center">
           <span className={cn(
-            "text-3xl font-bold font-mono tracking-tight transition-all duration-300",
+            "text-4xl font-bold font-mono tracking-tight transition-all duration-300",
             isLowTime 
               ? "text-rose-400 animate-pulse font-extrabold scale-105" 
               : "text-[var(--text-primary)]"
@@ -99,7 +99,7 @@ export function TimerRing({
           </span>
           {label && (
             <span className={cn(
-              "text-[9px] font-mono uppercase tracking-widest mt-1 block",
+              "text-[10px] font-mono uppercase tracking-widest mt-1 block",
               isLowTime ? "text-rose-400/80" : "text-[var(--text-muted)]"
             )}>
               {label}
