@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '../../lib/utils';
 import { HelpCircle, Volume2 } from 'lucide-react';
 
@@ -24,6 +24,34 @@ export function FlipCard({
   const [ttsLang, setTtsLang] = useState<'en' | 'hi'>(() => {
     return (localStorage.getItem('flick_tts_lang') as 'en' | 'hi') || 'en';
   });
+
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [glowStyle, setGlowStyle] = useState<React.CSSProperties>({
+    opacity: 0,
+    background: 'radial-gradient(circle at 0px 0px, rgba(124, 58, 237, 0.12) 0%, transparent 60%)'
+  });
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Front glow is purple; Back glow is emerald
+    const color = isFlipped ? 'rgba(16, 185, 129, 0.14)' : 'rgba(124, 58, 237, 0.14)';
+    
+    setGlowStyle({
+      opacity: 1,
+      background: `radial-gradient(circle at ${x}px ${y}px, ${color} 0%, transparent 65%)`
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setGlowStyle(prev => ({
+      ...prev,
+      opacity: 0
+    }));
+  };
 
   const handleFlipClick = (e: React.MouseEvent) => {
     // Avoid flipping when clicking the hint or voice buttons
@@ -115,6 +143,9 @@ export function FlipCard({
 
   return (
     <div 
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
       className={cn(
         "w-full max-w-[500px] h-[320px] md:max-w-[620px] md:h-[380px] lg:max-w-[700px] lg:h-[420px] cursor-pointer perspective-1200 hover:scale-[1.012] transition-all duration-300 ease-out", 
         className
@@ -131,8 +162,15 @@ export function FlipCard({
         }}
       >
         {/* Front Side */}
-        <div className="absolute inset-0 w-full h-full rounded-2xl bg-surface p-8 flex flex-col justify-between backface-hidden border border-[var(--border)]">
-          <div className="flex justify-between items-center text-xs text-[var(--text-muted)] font-mono uppercase tracking-wider">
+        <div className="absolute inset-0 w-full h-full rounded-2xl bg-surface p-8 flex flex-col justify-between backface-hidden border border-[var(--border)] overflow-hidden">
+          <div 
+            style={{
+              ...glowStyle,
+              transition: 'opacity 0.3s ease',
+            }}
+            className="absolute inset-0 pointer-events-none z-0 rounded-2xl"
+          />
+          <div className="relative z-10 flex justify-between items-center text-xs text-[var(--text-muted)] font-mono uppercase tracking-wider">
             <div className="flex items-center gap-1.5">
               <span>Question</span>
               {/* Voice toggle and trigger buttons */}
@@ -171,7 +209,7 @@ export function FlipCard({
             )}
           </div>
           
-          <div className="flex-1 flex flex-col justify-center items-center text-center">
+          <div className="relative z-10 flex-1 flex flex-col justify-center items-center text-center">
             {showHint ? (
               <div className="animate-fade-up text-sm italic text-purple-400 max-w-[80%]">
                 {hint}
@@ -183,14 +221,21 @@ export function FlipCard({
             )}
           </div>
           
-          <div className="text-center text-xs text-[var(--text-muted)] select-none">
+          <div className="relative z-10 text-center text-xs text-[var(--text-muted)] select-none">
             Tap to reveal answer
           </div>
         </div>
 
         {/* Back Side */}
-        <div className="absolute inset-0 w-full h-full rounded-2xl bg-surface-2 p-8 flex flex-col justify-between backface-hidden rotate-y-180 border border-[var(--border)]">
-          <div className="flex justify-between items-center text-xs text-[var(--text-muted)] font-mono uppercase tracking-wider">
+        <div className="absolute inset-0 w-full h-full rounded-2xl bg-surface-2 p-8 flex flex-col justify-between backface-hidden rotate-y-180 border border-[var(--border)] overflow-hidden">
+          <div 
+            style={{
+              ...glowStyle,
+              transition: 'opacity 0.3s ease',
+            }}
+            className="absolute inset-0 pointer-events-none z-0 rounded-2xl"
+          />
+          <div className="relative z-10 flex justify-between items-center text-xs text-[var(--text-muted)] font-mono uppercase tracking-wider">
             <div className="flex items-center gap-1.5">
               <span>Answer</span>
               {/* Voice toggle and trigger buttons */}
@@ -215,13 +260,13 @@ export function FlipCard({
             </div>
           </div>
           
-          <div className="flex-1 flex justify-center items-center text-center">
+          <div className="relative z-10 flex-1 flex justify-center items-center text-center">
             <p className="text-base md:text-lg leading-relaxed text-[var(--text-primary)] font-normal select-none">
               {back}
             </p>
           </div>
           
-          <div className="text-center text-xs text-[var(--text-muted)] select-none">
+          <div className="relative z-10 text-center text-xs text-[var(--text-muted)] select-none">
             How well did you remember?
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
 import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
 import Generate from './pages/Generate';
@@ -7,6 +8,22 @@ import DeckView from './pages/DeckView';
 import Study from './pages/Study';
 import Settings from './pages/Settings';
 import { CardUsageProvider } from './context/CardUsageContext';
+
+function AnimatedRoutes() {
+  const location = useLocation();
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<Landing />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/generate" element={<Generate />} />
+        <Route path="/deck/:id" element={<DeckView />} />
+        <Route path="/study/:id" element={<Study />} />
+        <Route path="/settings" element={<Settings />} />
+      </Routes>
+    </AnimatePresence>
+  );
+}
 
 export function App() {
   // Sync the client appearance theme class on initial mount
@@ -22,14 +39,7 @@ export function App() {
   return (
     <Router>
       <CardUsageProvider>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/generate" element={<Generate />} />
-          <Route path="/deck/:id" element={<DeckView />} />
-          <Route path="/study/:id" element={<Study />} />
-          <Route path="/settings" element={<Settings />} />
-        </Routes>
+        <AnimatedRoutes />
       </CardUsageProvider>
     </Router>
   );
