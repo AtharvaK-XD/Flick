@@ -516,15 +516,10 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
           />
         </div>
 
-        {/* ── Two-Column Split (Or Centered for MCQs) ── */}
-        <div className={cn(
-          "w-full items-start",
-          currentCard.choices 
-            ? "max-w-2xl mx-auto flex flex-col gap-6" 
-            : "grid grid-cols-1 lg:grid-cols-2 gap-8"
-        )}>
+        {/* ── Two-Column Split ── */}
+        <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
 
-          {/* LEFT/MCQ Content: Question + Explanation + Controls */}
+          {/* LEFT: Question + Choices + Navigation Controls */}
           <div className={cn("flex flex-col gap-5 w-full", !currentCard.choices && "order-2 lg:order-1")}>
             <p className="text-[10px] font-mono text-purple-400/70 uppercase tracking-[0.15em]">
               {title || 'Untitled Deck'} · Card {currentCardIndex + 1}
@@ -538,35 +533,55 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
             </div>
 
             {currentCard.choices ? (
-              /* Dedicated MCQ Option List for Review */
+              /* Dedicated Interactive MCQ Option List for Review */
               <div className="grid grid-cols-1 gap-2.5 mt-2">
                 {currentCard.choices.map((choice, idx) => {
                   const isCorrect = choice === currentCard.back;
+                  const choiceSelected = reviewSelections.get(currentCardIndex);
+                  const hasAnswered = !!choiceSelected;
+                  const isSelected = choiceSelected === choice;
+
+                  let btnStyle = "bg-white/[0.02] border-white/5 text-[var(--text-secondary)] hover:bg-white/[0.05]";
+                  if (hasAnswered) {
+                    if (isCorrect) {
+                      btnStyle = "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 font-semibold shadow-[0_0_12px_rgba(16,185,129,0.1)]";
+                    } else if (isSelected) {
+                      btnStyle = "bg-rose-500/10 border-rose-500/30 text-rose-400 font-semibold shadow-[0_0_12px_rgba(244,63,94,0.1)]";
+                    } else {
+                      btnStyle = "bg-white/[0.01] border-white/5 text-[var(--text-secondary)] opacity-40";
+                    }
+                  }
+
                   return (
-                    <div
+                    <button
                       key={idx}
+                      disabled={hasAnswered}
+                      onClick={() => {
+                        setReviewSelections(prev => new Map(prev).set(currentCardIndex, choice));
+                        markCard(isCorrect ? 'right' : 'wrong');
+                      }}
                       className={cn(
-                        "w-full text-left px-4 py-3.5 rounded-xl border text-sm transition-all duration-200",
-                        isCorrect
-                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 font-semibold"
-                          : "bg-white/[0.02] border-white/5 text-[var(--text-secondary)] opacity-60"
+                        "w-full text-left px-4 py-3.5 rounded-xl border text-sm transition-all duration-200 cursor-pointer active:scale-[0.98]",
+                        btnStyle
                       )}
                     >
                       <div className="flex items-center gap-3">
                         <span className={cn(
                           "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-mono border",
-                          isCorrect ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-400" : "bg-white/5 border-white/10 text-[var(--text-muted)]"
+                          hasAnswered && isCorrect ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-400"
+                          : hasAnswered && isSelected ? "bg-rose-500/20 border-rose-500/30 text-rose-400"
+                          : "bg-white/5 border-white/10 text-[var(--text-muted)]"
                         )}>
                           {String.fromCharCode(65 + idx)}
                         </span>
                         <span className="flex-1 leading-snug">{choice}</span>
-                        {isCorrect && (
+                        {hasAnswered && isCorrect && (
                           <span className="text-[9px] font-mono text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
                             Correct Answer
                           </span>
                         )}
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -574,21 +589,8 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
 
             <div className="h-px bg-white/5" />
 
-            {/* Explanation panel */}
-            {currentCard.choices ? (
-              /* Dedicated MCQ Explanation */
-              <div className="space-y-3">
-                <span className="text-[10px] font-mono text-emerald-400/80 uppercase tracking-widest">Answer / Explanation</span>
-                <p className="text-sm text-[var(--text-primary)] leading-relaxed">{currentCard.explanation || currentCard.back}</p>
-                {currentCard.hint && (
-                  <div className="mt-2 p-3 rounded-lg bg-purple-500/5 border border-purple-500/10">
-                    <p className="text-[10px] font-mono text-purple-400/70 uppercase tracking-widest mb-1">Hint</p>
-                    <p className="text-xs text-purple-300/80 leading-relaxed italic">{currentCard.hint}</p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              /* Standard Flashcard Explanation (Flipped Check) */
+            {/* Explanation panel (only for standard flashcards, since MCQs have it on the right) */}
+            {!currentCard.choices && (
               <AnimatePresence mode="wait">
                 {isFlipped ? (
                   <motion.div
@@ -647,31 +649,33 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
 
             {/* Controls */}
             <div className="flex flex-col gap-3 pt-2">
-              {/* Wrong / Right */}
-              <div className="flex gap-3">
-                <button
-                  onClick={() => markCard('wrong')}
-                  className={cn(
-                    "flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium transition-all duration-200 active:scale-[0.97]",
-                    cardResults.get(currentCardIndex) === 'wrong'
-                      ? "bg-rose-500/20 text-rose-400 border border-rose-500/30"
-                      : "bg-white/[0.03] text-[var(--text-secondary)] border border-white/5 hover:border-rose-500/20 hover:text-rose-400 hover:bg-rose-500/5"
-                  )}
-                >
-                  <ThumbsDown size={15} /><span>Wrong</span>
-                </button>
-                <button
-                  onClick={() => markCard('right')}
-                  className={cn(
-                    "flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium transition-all duration-200 active:scale-[0.97]",
-                    cardResults.get(currentCardIndex) === 'right'
-                      ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                      : "bg-white/[0.03] text-[var(--text-secondary)] border border-white/5 hover:border-emerald-500/20 hover:text-emerald-400 hover:bg-emerald-500/5"
-                  )}
-                >
-                  <ThumbsUp size={15} /><span>Right</span>
-                </button>
-              </div>
+              {/* Wrong / Right self-marking (only for standard flashcards, since MCQs have it on the right) */}
+              {!currentCard.choices && (
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => markCard('wrong')}
+                    className={cn(
+                      "flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium transition-all duration-200 active:scale-[0.97]",
+                      cardResults.get(currentCardIndex) === 'wrong'
+                        ? "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+                        : "bg-white/[0.03] text-[var(--text-secondary)] border border-white/5 hover:border-rose-500/20 hover:text-rose-400 hover:bg-rose-500/5"
+                    )}
+                  >
+                    <ThumbsDown size={15} /><span>Wrong</span>
+                  </button>
+                  <button
+                    onClick={() => markCard('right')}
+                    className={cn(
+                      "flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium transition-all duration-200 active:scale-[0.97]",
+                      cardResults.get(currentCardIndex) === 'right'
+                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                        : "bg-white/[0.03] text-[var(--text-secondary)] border border-white/5 hover:border-emerald-500/20 hover:text-emerald-400 hover:bg-emerald-500/5"
+                    )}
+                  >
+                    <ThumbsUp size={15} /><span>Right</span>
+                  </button>
+                </div>
+              )}
 
               {/* Prev / Dots / Next */}
               <div className="flex items-center justify-between">
@@ -853,6 +857,95 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
                   </motion.div>
                 </AnimatePresence>
               </div>
+            </div>
+          )}
+
+          {/* RIGHT: MCQ Answer Detail Panel (only for MCQ decks) */}
+          {currentCard.choices && (
+            <div className="order-1 lg:order-2 w-full">
+              <AnimatePresence mode="wait">
+                {!reviewSelections.get(currentCardIndex) ? (
+                  <motion.div
+                    key="locked"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="w-full rounded-3xl border border-dashed border-white/10 bg-white/[0.01] p-8 flex flex-col items-center justify-center text-center min-h-[350px]"
+                  >
+                    <HelpCircle size={36} className="text-purple-400/50 mb-3 animate-pulse" />
+                    <h3 className="text-sm font-semibold text-[var(--text-secondary)]">Answer Pending</h3>
+                    <p className="text-xs text-[var(--text-muted)] mt-1.5 max-w-xs leading-relaxed">
+                      Select one of the multiple-choice options on the left to reveal the correct answer and detailed explanation.
+                    </p>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="unlocked"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="w-full rounded-3xl bg-[#161618] border border-white/5 p-8 flex flex-col justify-between min-h-[350px] shadow-2xl relative overflow-hidden text-left"
+                  >
+                    <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-purple-500/50 to-transparent" />
+                    
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-widest">Answer &amp; Explanation</span>
+                        <span className={cn(
+                          "text-[9px] font-mono uppercase tracking-widest px-2 py-0.5 rounded border",
+                          reviewSelections.get(currentCardIndex) === currentCard.back
+                            ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                            : "bg-rose-500/10 border-rose-500/20 text-rose-400"
+                        )}>
+                          {reviewSelections.get(currentCardIndex) === currentCard.back ? "Correct" : "Incorrect"}
+                        </span>
+                      </div>
+                      
+                      <p className="text-sm text-[var(--text-primary)] leading-relaxed">
+                        {currentCard.explanation || `Correct Answer: ${currentCard.back}`}
+                      </p>
+                      
+                      {currentCard.hint && (
+                        <div className="p-3.5 rounded-xl bg-purple-500/5 border border-purple-500/10 mt-2 text-left">
+                          <span className="text-[9px] font-mono text-purple-400 uppercase tracking-widest block mb-1">Hint</span>
+                          <p className="text-xs text-purple-300/80 italic leading-relaxed">{currentCard.hint}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Self-marking Override buttons */}
+                    <div className="space-y-3 pt-4 border-t border-white/5 mt-4">
+                      <span className="text-[9px] font-mono text-[var(--text-muted)] uppercase tracking-wider block">Self-Evaluation Override</span>
+                      <div className="flex gap-3">
+                        <button
+                          type="button"
+                          onClick={() => markCard('wrong')}
+                          className={cn(
+                            "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 active:scale-[0.97] cursor-pointer",
+                            cardResults.get(currentCardIndex) === 'wrong'
+                              ? "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+                              : "bg-white/[0.03] text-[var(--text-secondary)] border border-white/5 hover:border-rose-500/20 hover:text-rose-400 hover:bg-rose-500/5"
+                          )}
+                        >
+                          <ThumbsDown size={13} /><span>Mark Wrong</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => markCard('right')}
+                          className={cn(
+                            "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 active:scale-[0.97] cursor-pointer",
+                            cardResults.get(currentCardIndex) === 'right'
+                              ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                              : "bg-white/[0.03] text-[var(--text-secondary)] border border-white/5 hover:border-emerald-500/20 hover:text-emerald-400 hover:bg-emerald-500/5"
+                          )}
+                        >
+                          <ThumbsUp size={13} /><span>Mark Right</span>
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
         </div>
