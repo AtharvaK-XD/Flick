@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { Card } from '../../types';
 import { FlipCard } from '../ui/FlipCard';
+import TimerRing from '../ui/TimerRing';
 import Button from '../ui/Button';
 import { CheckCircle, Sparkles, ArrowLeft, Zap, Clock } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -327,160 +328,194 @@ export function StudyMode({
       {/* Center Study Arena */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 relative z-10 overflow-y-auto">
         {!isFinished ? (
-          <div className="w-full flex flex-col items-center gap-4 overflow-hidden max-w-[620px] mx-auto">
-            <div className="w-full flex justify-center py-1">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentIndex}
-                  initial={{ opacity: 0, x: 50, scale: 0.98 }}
-                  animate={{ opacity: 1, x: 0, scale: 1 }}
-                  exit={{ opacity: 0, x: -50, scale: 0.98 }}
-                  transition={{ type: "spring", stiffness: 350, damping: 28 }}
-                  className="w-full flex justify-center"
-                >
-                  {studyStyle === 'quiz' ? (
-                    /* Flat card for MCQ Question */
-                    <div className="w-full rounded-3xl bg-gradient-to-br from-[#1a1a2e] via-[#16161a] to-[#0f0f14] border border-white/[0.08] relative overflow-hidden shadow-2xl p-8 min-h-[165px] flex flex-col justify-between text-left">
-                      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-purple-500/50 to-transparent" />
-                      <div className="absolute -top-20 -right-20 w-64 h-64 bg-purple-600/[0.07] rounded-full blur-3xl pointer-events-none" />
-                      <span className="text-[10px] font-mono text-purple-400/80 uppercase tracking-[0.18em] block">
-                        Question
-                      </span>
-                      <div className="flex-1 flex items-center justify-center py-4">
-                        <h2 className="text-lg md:text-xl font-semibold text-[var(--text-primary)] text-center leading-relaxed select-none">
-                          {currentCard.front}
-                        </h2>
-                      </div>
-                      {currentCard.hint && !hasAnswered && (
-                        <div className="text-center mt-2 border-t border-white/5 pt-2">
-                          <button
-                            onClick={() => setShowQuizHint(h => !h)}
-                            className="text-[10px] font-mono text-[var(--text-secondary)] hover:text-purple-400 underline transition-colors cursor-pointer bg-transparent border-none outline-none"
-                          >
-                            {showQuizHint ? "Hide Hint" : "Need a Hint?"}
-                          </button>
-                          {showQuizHint && (
-                            <motion.p
-                              initial={{ opacity: 0, y: 5 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              className="text-xs text-purple-300/80 italic mt-1.5"
-                            >
-                              {currentCard.hint}
-                            </motion.p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <FlipCard
-                      front={currentCard.front}
-                      back={currentCard.back}
-                      hint={currentCard.hint}
-                      isFlipped={isFlipped}
-                      onFlip={() => {
-                        setIsFlipped(!isFlipped);
-                      }}
-                    />
-                  )}
-                </motion.div>
-              </AnimatePresence>
-            </div>
-
-            {/* MCQ Quiz Options Grid */}
-            {studyStyle === 'quiz' && shuffledChoices.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full mt-2">
-                {shuffledChoices.map((choice, idx) => {
-                  const isCorrect = choice === currentCard.back;
-                  const isSelected = selectedChoice === choice;
-                  let btnStyle = "bg-surface border-[var(--border)] text-[var(--text-secondary)] hover:bg-white/[0.03]";
-                  
-                  if (hasAnswered) {
-                    if (isCorrect) {
-                      btnStyle = "bg-emerald-500/10 border-emerald-500/40 text-emerald-400 font-semibold shadow-[0_0_15px_rgba(16,185,129,0.15)]";
-                    } else if (isSelected) {
-                      btnStyle = "bg-rose-500/10 border-rose-500/40 text-rose-400 font-semibold shadow-[0_0_15px_rgba(244,63,94,0.15)]";
-                    }
-                  } else if (isSelected) {
-                    btnStyle = "bg-purple-500/10 border-purple-500/40 text-purple-400 border-purple-500/50";
-                  }
-                  
-                  return (
-                    <button
-                      key={idx}
-                      disabled={hasAnswered}
-                      onClick={() => handleAnswer(choice)}
-                      className={cn(
-                        "w-full text-left px-5 py-4 rounded-xl border text-sm transition-all duration-300 active:scale-[0.98] cursor-pointer",
-                        btnStyle
-                      )}
+          studyStyle === 'quiz' ? (
+            /* Two-Column split layout for MCQ Quiz Mode */
+            <div className="w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-start justify-center">
+              {/* Left Column (Quiz Content - 7 cols) */}
+              <div className="lg:col-span-7 flex flex-col gap-4 w-full">
+                <div className="w-full flex justify-center py-1">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={currentIndex}
+                      initial={{ opacity: 0, x: 50, scale: 0.98 }}
+                      animate={{ opacity: 1, x: 0, scale: 1 }}
+                      exit={{ opacity: 0, x: -50, scale: 0.98 }}
+                      transition={{ type: "spring", stiffness: 350, damping: 28 }}
+                      className="w-full flex justify-center"
                     >
-                      <div className="flex items-center gap-3">
-                        <span className={cn(
-                          "w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono border transition-all duration-300",
-                          hasAnswered && isCorrect ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
-                          : hasAnswered && isSelected ? "bg-rose-500/20 border-rose-500/40 text-rose-400"
-                          : "bg-white/5 border-white/10 text-[var(--text-secondary)]"
-                        )}>
-                          {String.fromCharCode(65 + idx)}
+                      {/* Flat card for MCQ Question */}
+                      <div className="w-full rounded-3xl bg-gradient-to-br from-[#1a1a2e] via-[#16161a] to-[#0f0f14] border border-white/[0.08] relative overflow-hidden shadow-2xl p-8 min-h-[165px] flex flex-col justify-between text-left">
+                        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-purple-500/50 to-transparent" />
+                        <div className="absolute -top-20 -right-20 w-64 h-64 bg-purple-600/[0.07] rounded-full blur-3xl pointer-events-none" />
+                        <span className="text-[10px] font-mono text-purple-400/80 uppercase tracking-[0.18em] block">
+                          Question
                         </span>
-                        <span className="flex-1 leading-snug">{choice}</span>
+                        <div className="flex-1 flex items-center justify-center py-4">
+                          <h2 className="text-lg md:text-xl font-semibold text-[var(--text-primary)] text-center leading-relaxed select-none">
+                            {currentCard.front}
+                          </h2>
+                        </div>
+                        {currentCard.hint && !hasAnswered && (
+                          <div className="text-center mt-2 border-t border-white/5 pt-2">
+                            <button
+                              onClick={() => setShowQuizHint(h => !h)}
+                              className="text-[10px] font-mono text-[var(--text-secondary)] hover:text-purple-400 underline transition-colors cursor-pointer bg-transparent border-none outline-none"
+                            >
+                              {showQuizHint ? "Hide Hint" : "Need a Hint?"}
+                            </button>
+                            {showQuizHint && (
+                              <motion.p
+                                initial={{ opacity: 0, y: 5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="text-xs text-purple-300/80 italic mt-1.5"
+                              >
+                                {currentCard.hint}
+                              </motion.p>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* MCQ Quiz Mode Explanation */}
-            {studyStyle === 'quiz' && hasAnswered && (
-              <motion.div
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="w-full mt-3 p-5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2.5 text-left"
-              >
-                <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                  <span className="text-[10px] font-mono text-emerald-400/80 uppercase tracking-widest block">
-                    Answer &amp; Explanation
-                  </span>
-                  <span className="text-[10px] font-mono text-[var(--text-muted)] bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 text-emerald-400">
-                    Correct: {currentCard.back}
-                  </span>
+                    </motion.div>
+                  </AnimatePresence>
                 </div>
-                <p className="text-sm text-[var(--text-primary)] leading-relaxed">
-                  {currentCard.explanation || "No additional explanation provided."}
-                </p>
-                {currentCard.hint && (
-                  <p className="text-xs text-[var(--text-muted)] italic font-mono mt-1 pt-1 border-t border-white/5">
-                    Hint was: {currentCard.hint}
+
+                {/* MCQ Quiz Options Grid */}
+                {shuffledChoices.length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full mt-2">
+                    {shuffledChoices.map((choice, idx) => {
+                      const isCorrect = choice === currentCard.back;
+                      const isSelected = selectedChoice === choice;
+                      let btnStyle = "bg-surface border-[var(--border)] text-[var(--text-secondary)] hover:bg-white/[0.03]";
+                      
+                      if (hasAnswered) {
+                        if (isCorrect) {
+                          btnStyle = "bg-emerald-500/10 border-emerald-500/40 text-emerald-400 font-semibold shadow-[0_0_15px_rgba(16,185,129,0.15)]";
+                        } else if (isSelected) {
+                          btnStyle = "bg-rose-500/10 border-rose-500/40 text-rose-400 font-semibold shadow-[0_0_15px_rgba(244,63,94,0.15)]";
+                        }
+                      } else if (isSelected) {
+                        btnStyle = "bg-purple-500/10 border-purple-500/40 text-purple-400 border-purple-500/50";
+                      }
+                      
+                      return (
+                        <button
+                          key={idx}
+                          disabled={hasAnswered}
+                          onClick={() => handleAnswer(choice)}
+                          className={cn(
+                            "w-full text-left px-5 py-4 rounded-xl border text-sm transition-all duration-300 active:scale-[0.98] cursor-pointer",
+                            btnStyle
+                          )}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className={cn(
+                              "w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono border transition-all duration-300",
+                              hasAnswered && isCorrect ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
+                              : hasAnswered && isSelected ? "bg-rose-500/20 border-rose-500/40 text-rose-400"
+                              : "bg-white/5 border-white/10 text-[var(--text-secondary)]"
+                            )}>
+                              {String.fromCharCode(65 + idx)}
+                            </span>
+                            <span className="flex-1 leading-snug">{choice}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* MCQ Quiz Mode Explanation */}
+                {hasAnswered && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="w-full mt-3 p-5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2.5 text-left"
+                  >
+                    <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                      <span className="text-[10px] font-mono text-emerald-400/80 uppercase tracking-widest block">
+                        Answer &amp; Explanation
+                      </span>
+                      <span className="text-[10px] font-mono text-[var(--text-muted)] bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 text-emerald-400">
+                        Correct: {currentCard.back}
+                      </span>
+                    </div>
+                    <p className="text-sm text-[var(--text-primary)] leading-relaxed">
+                      {currentCard.explanation || "No additional explanation provided."}
+                    </p>
+                    {currentCard.hint && (
+                      <p className="text-xs text-[var(--text-muted)] italic font-mono mt-1 pt-1 border-t border-white/5">
+                        Hint was: {currentCard.hint}
+                      </p>
+                    )}
+                  </motion.div>
+                )}
+
+                {!hasAnswered && (
+                  <p className="text-xs text-[var(--text-secondary)] font-mono mt-2 text-center">
+                    Select an option above (or press [A - D] / [1 - 4])
                   </p>
                 )}
-              </motion.div>
-            )}
 
-            {studyStyle === 'flashcard' && !isFlipped && (
-              <p className="text-xs text-[var(--text-secondary)] font-mono animate-pulse mt-2">
-                Press [Space] or click card to flip
-              </p>
-            )}
-
-            {studyStyle === 'flashcard' && isFlipped && (
-              <div className="text-xs text-[var(--text-secondary)] font-mono mt-2">
-                Press [1 - 4] on your keyboard to rate
+                {hasAnswered && (
+                  <p className="text-xs text-[var(--text-secondary)] font-mono mt-2 text-center">
+                    Press [1 - 4] to adjust rating &amp; advance
+                  </p>
+                )}
               </div>
-            )}
 
-            {studyStyle === 'quiz' && !hasAnswered && (
-              <p className="text-xs text-[var(--text-secondary)] font-mono mt-2">
-                Select an option above (or press [A - D] / [1 - 4])
-              </p>
-            )}
+              {/* Right Column (Persistent Countdown Ring - 5 cols) */}
+              <div className="lg:col-span-5 w-full flex flex-col items-center justify-center">
+                <div className="w-full rounded-3xl bg-[#161618] border border-white/5 p-8 shadow-2xl relative overflow-hidden flex flex-col items-center text-center">
+                  <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-purple-500/50 to-transparent" />
+                  
+                  <h3 className="text-xs font-mono uppercase tracking-widest text-[var(--text-secondary)] mb-6">
+                    {timerLimit ? "Active Quiz Timer" : "Quiz Elapsed Time"}
+                  </h3>
 
-            {studyStyle === 'quiz' && hasAnswered && (
-              <p className="text-xs text-[var(--text-secondary)] font-mono mt-2">
-                Press [1 - 4] to adjust rating &amp; advance
-              </p>
-            )}
-          </div>
+                  <TimerRing
+                    timeLeft={timerLimit ? timeLeft : elapsedTime}
+                    totalDuration={timerLimit ? timerLimit * 60 : elapsedTime}
+                    isCountingUp={!timerLimit}
+                    label={timerLimit ? "Remaining" : "Elapsed"}
+                  />
+
+                  <p className="text-[11px] text-[var(--text-muted)] font-mono max-w-[240px] mt-6 leading-relaxed">
+                    {timerLimit 
+                      ? "Timer runs persistently across all cards. Auto-submits on expiration."
+                      : "Time spent is tracked to measure your recall speed."}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Standard Flashcard Layout */
+            <div className="w-full flex flex-col items-center gap-4 overflow-hidden max-w-[620px] mx-auto">
+              <div className="w-full flex justify-center py-1">
+                <FlipCard
+                  front={currentCard.front}
+                  back={currentCard.back}
+                  hint={currentCard.hint}
+                  isFlipped={isFlipped}
+                  onFlip={() => {
+                    setIsFlipped(!isFlipped);
+                  }}
+                />
+              </div>
+
+              {/* Ratings details/labels */}
+              {!isFlipped && (
+                <p className="text-xs text-[var(--text-secondary)] font-mono animate-pulse mt-2">
+                  Press [Space] or click card to flip
+                </p>
+              )}
+
+              {isFlipped && (
+                <div className="text-xs text-[var(--text-secondary)] font-mono mt-2">
+                  Press [1 - 4] on your keyboard to rate
+                </div>
+              )}
+            </div>
+          )
         ) : (
           /* Completion Screen */
           <motion.div
