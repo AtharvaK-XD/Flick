@@ -369,8 +369,3 @@ export function StudyMode({
 }
 
 export default StudyMode;
-    </div>
-  );
-}
-
-export default StudyMode;
