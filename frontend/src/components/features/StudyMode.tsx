@@ -33,10 +33,11 @@ export function StudyMode({
 
   // MCQ Mode States
   const hasMcqs = cards.some(c => c.choices && Array.isArray(c.choices) && c.choices.length > 0);
-  const [studyStyle, setStudyStyle] = useState<'flashcard' | 'quiz'>(hasMcqs ? 'quiz' : 'flashcard');
+  const studyStyle = hasMcqs ? 'quiz' : 'flashcard';
   const [shuffledChoices, setShuffledChoices] = useState<string[]>([]);
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [hasAnswered, setHasAnswered] = useState(false);
+  const [showQuizHint, setShowQuizHint] = useState(false);
 
   const currentCard = cards[currentIndex];
   const progressPercent = cards.length > 0 ? ((currentIndex) / cards.length) * 100 : 0;
@@ -56,6 +57,7 @@ export function StudyMode({
     setSelectedChoice(null);
     setHasAnswered(false);
     setIsFlipped(false);
+    setShowQuizHint(false);
   }, [currentIndex, currentCard]);
 
   const triggerFeedback = (quality: 0 | 1 | 2 | 3) => {
@@ -89,9 +91,6 @@ export function StudyMode({
         e.preventDefault();
         if (studyStyle === 'flashcard') {
           setIsFlipped((prev) => !prev);
-        } else if (studyStyle === 'quiz' && !hasAnswered) {
-          setIsFlipped(true);
-          setHasAnswered(true);
         }
       } else if (e.code === 'Escape') {
         e.preventDefault();
@@ -138,7 +137,6 @@ export function StudyMode({
   const handleAnswer = (choice: string) => {
     setSelectedChoice(choice);
     setHasAnswered(true);
-    setIsFlipped(true); // Flip card to show answer
 
     const isCorrect = choice === currentCard.back;
     if (isCorrect) {
@@ -256,33 +254,7 @@ export function StudyMode({
           <span>Leave study mode</span>
         </button>
 
-        {/* Study Style Toggle (Flashcard vs Quiz) */}
-        {hasMcqs && !isFinished && (
-          <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-lg p-0.5">
-            <button
-              onClick={() => setStudyStyle('flashcard')}
-              className={cn(
-                "px-2.5 py-1 text-[10px] font-medium rounded transition-colors cursor-pointer",
-                studyStyle === 'flashcard' 
-                  ? "bg-purple-600 text-white font-semibold" 
-                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              )}
-            >
-              Flashcards
-            </button>
-            <button
-              onClick={() => setStudyStyle('quiz')}
-              className={cn(
-                "px-2.5 py-1 text-[10px] font-medium rounded transition-colors cursor-pointer",
-                studyStyle === 'quiz' 
-                  ? "bg-purple-600 text-white font-semibold" 
-                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              )}
-            >
-              Quiz (MCQ)
-            </button>
-          </div>
-        )}
+
 
         <span className="text-xs font-mono text-[var(--text-secondary)] hidden md:inline">
           {deckTitle}
@@ -307,17 +279,50 @@ export function StudyMode({
                   transition={{ type: "spring", stiffness: 350, damping: 28 }}
                   className="w-full flex justify-center"
                 >
-                  <FlipCard
-                    front={currentCard.front}
-                    back={currentCard.back}
-                    hint={currentCard.hint}
-                    isFlipped={isFlipped}
-                    onFlip={() => {
-                      if (studyStyle === 'flashcard') {
+                  {studyStyle === 'quiz' ? (
+                    /* Flat card for MCQ Question */
+                    <div className="w-full rounded-3xl bg-gradient-to-br from-[#1a1a2e] via-[#16161a] to-[#0f0f14] border border-white/[0.08] relative overflow-hidden shadow-2xl p-8 min-h-[165px] flex flex-col justify-between text-left">
+                      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-purple-500/50 to-transparent" />
+                      <div className="absolute -top-20 -right-20 w-64 h-64 bg-purple-600/[0.07] rounded-full blur-3xl pointer-events-none" />
+                      <span className="text-[10px] font-mono text-purple-400/80 uppercase tracking-[0.18em] block">
+                        Question
+                      </span>
+                      <div className="flex-1 flex items-center justify-center py-4">
+                        <h2 className="text-lg md:text-xl font-semibold text-[var(--text-primary)] text-center leading-relaxed select-none">
+                          {currentCard.front}
+                        </h2>
+                      </div>
+                      {currentCard.hint && !hasAnswered && (
+                        <div className="text-center mt-2 border-t border-white/5 pt-2">
+                          <button
+                            onClick={() => setShowQuizHint(h => !h)}
+                            className="text-[10px] font-mono text-[var(--text-secondary)] hover:text-purple-400 underline transition-colors cursor-pointer bg-transparent border-none outline-none"
+                          >
+                            {showQuizHint ? "Hide Hint" : "Need a Hint?"}
+                          </button>
+                          {showQuizHint && (
+                            <motion.p
+                              initial={{ opacity: 0, y: 5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="text-xs text-purple-300/80 italic mt-1.5"
+                            >
+                              {currentCard.hint}
+                            </motion.p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <FlipCard
+                      front={currentCard.front}
+                      back={currentCard.back}
+                      hint={currentCard.hint}
+                      isFlipped={isFlipped}
+                      onFlip={() => {
                         setIsFlipped(!isFlipped);
-                      }
-                    }}
-                  />
+                      }}
+                    />
+                  )}
                 </motion.div>
               </AnimatePresence>
             </div>
@@ -365,6 +370,32 @@ export function StudyMode({
                   );
                 })}
               </div>
+            )}
+
+            {/* MCQ Quiz Mode Explanation */}
+            {studyStyle === 'quiz' && hasAnswered && (
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="w-full mt-3 p-5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2.5 text-left"
+              >
+                <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                  <span className="text-[10px] font-mono text-emerald-400/80 uppercase tracking-widest block">
+                    Answer &amp; Explanation
+                  </span>
+                  <span className="text-[10px] font-mono text-[var(--text-muted)] bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 text-emerald-400">
+                    Correct: {currentCard.back}
+                  </span>
+                </div>
+                <p className="text-sm text-[var(--text-primary)] leading-relaxed">
+                  {currentCard.explanation || "No additional explanation provided."}
+                </p>
+                {currentCard.hint && (
+                  <p className="text-xs text-[var(--text-muted)] italic font-mono mt-1 pt-1 border-t border-white/5">
+                    Hint was: {currentCard.hint}
+                  </p>
+                )}
+              </motion.div>
             )}
 
             {studyStyle === 'flashcard' && !isFlipped && (

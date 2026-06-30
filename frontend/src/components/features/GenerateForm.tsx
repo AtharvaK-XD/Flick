@@ -31,7 +31,6 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
   const [title, setTitle] = useState('');
   const [cardCount, setCardCount] = useState<number>(10);
   const [generationMode, setGenerationMode] = useState<'flashcard' | 'mcq'>('flashcard');
-  const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   
   // Inputs
   const [textInput, setTextInput] = useState('');
@@ -69,11 +68,6 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [cardResults, setCardResults] = useState<Map<number, 'right' | 'wrong'>>(new Map());
-
-  // Reset selected choice when card index changes
-  useEffect(() => {
-    setSelectedChoice(null);
-  }, [currentCardIndex]);
 
   // Drag and Drop State
   const [isDragActive, setIsDragActive] = useState(false);
@@ -456,13 +450,17 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
     }
   }, [currentCardIndex, generatedCards.length]);
 
+  const currentCard = generatedCards[currentCardIndex];
+  const rightCount = [...cardResults.values()].filter(v => v === 'right').length;
+  const wrongCount = [...cardResults.values()].filter(v => v === 'wrong').length;
+
   // Keyboard shortcuts for review phase
   useEffect(() => {
-    if (phase !== 'review') return;
+    if (phase !== 'review' || !currentCard) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight') goNext();
       else if (e.key === 'ArrowLeft') goPrev();
-      else if (e.key === ' ' || e.key === 'Enter') {
+      else if ((e.key === ' ' || e.key === 'Enter') && !currentCard.choices) {
         e.preventDefault();
         setIsFlipped(f => !f);
         setShowHint(false);
@@ -470,7 +468,7 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [phase, goNext, goPrev]);
+  }, [phase, goNext, goPrev, currentCard]);
 
   // (3D tilt removed — was causing hover lag on flashcard click)
 
@@ -479,10 +477,6 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
     { id: 'url', label: 'URL', icon: Link2 },
     { id: 'text', label: 'Text', icon: FileText },
   ] as const;
-
-  const currentCard = generatedCards[currentCardIndex];
-  const rightCount = [...cardResults.values()].filter(v => v === 'right').length;
-  const wrongCount = [...cardResults.values()].filter(v => v === 'wrong').length;
 
   // ═══════════════════════════════════════════
   // REVIEW PHASE
@@ -520,11 +514,16 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
           />
         </div>
 
-        {/* ── Two-Column Split ── */}
-        <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        {/* ── Two-Column Split (Or Centered for MCQs) ── */}
+        <div className={cn(
+          "w-full items-start",
+          currentCard.choices 
+            ? "max-w-2xl mx-auto flex flex-col gap-6" 
+            : "grid grid-cols-1 lg:grid-cols-2 gap-8"
+        )}>
 
-          {/* LEFT: Question + Explanation + Controls */}
-          <div className="flex flex-col gap-5 order-2 lg:order-1">
+          {/* LEFT/MCQ Content: Question + Explanation + Controls */}
+          <div className={cn("flex flex-col gap-5 w-full", !currentCard.choices && "order-2 lg:order-1")}>
             <p className="text-[10px] font-mono text-purple-400/70 uppercase tracking-[0.15em]">
               {title || 'Untitled Deck'} · Card {currentCardIndex + 1}
             </p>
@@ -536,105 +535,113 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
               </h2>
             </div>
 
-            {currentCard.choices && (
+            {currentCard.choices ? (
+              /* Dedicated MCQ Option List for Review */
               <div className="grid grid-cols-1 gap-2.5 mt-2">
                 {currentCard.choices.map((choice, idx) => {
                   const isCorrect = choice === currentCard.back;
-                  const isSelected = selectedChoice === choice;
-                  let btnStyle = "bg-white/[0.02] border-white/5 text-[var(--text-secondary)] hover:bg-white/[0.05]";
-                  if (isFlipped) {
-                    if (isCorrect) {
-                      btnStyle = "bg-emerald-500/10 border-emerald-500/30 text-emerald-400";
-                    } else if (isSelected) {
-                      btnStyle = "bg-rose-500/10 border-rose-500/30 text-rose-400";
-                    }
-                  } else if (isSelected) {
-                    btnStyle = "bg-purple-500/10 border-purple-500/30 text-purple-400";
-                  }
-                  
                   return (
-                    <button
+                    <div
                       key={idx}
-                      onClick={() => {
-                        if (isFlipped) return;
-                        setSelectedChoice(choice);
-                        setIsFlipped(true);
-                        markCard(isCorrect ? 'right' : 'wrong');
-                      }}
                       className={cn(
-                        "w-full text-left px-4 py-3 rounded-xl border text-sm font-medium transition-all duration-200",
-                        btnStyle
+                        "w-full text-left px-4 py-3.5 rounded-xl border text-sm transition-all duration-200",
+                        isCorrect
+                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 font-semibold"
+                          : "bg-white/[0.02] border-white/5 text-[var(--text-secondary)] opacity-60"
                       )}
                     >
                       <div className="flex items-center gap-3">
-                        <span className="w-5 h-5 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-mono text-[var(--text-muted)]">
+                        <span className={cn(
+                          "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-mono border",
+                          isCorrect ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-400" : "bg-white/5 border-white/10 text-[var(--text-muted)]"
+                        )}>
                           {String.fromCharCode(65 + idx)}
                         </span>
                         <span className="flex-1 leading-snug">{choice}</span>
+                        {isCorrect && (
+                          <span className="text-[9px] font-mono text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                            Correct Answer
+                          </span>
+                        )}
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
-            )}
+            ) : null}
 
             <div className="h-px bg-white/5" />
 
-            {/* Explanation panel — shown after card is flipped */}
-            <AnimatePresence mode="wait">
-              {isFlipped ? (
-                <motion.div
-                  key="answer"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.25 }}
-                  className="space-y-3"
-                >
-                  <span className="text-[10px] font-mono text-emerald-400/80 uppercase tracking-widest">Answer / Explanation</span>
-                  <p className="text-sm text-[var(--text-primary)] leading-relaxed">{currentCard.explanation || currentCard.back}</p>
-                  {currentCard.hint && (
-                    <div className="mt-2 p-3 rounded-lg bg-purple-500/5 border border-purple-500/10">
-                      <p className="text-[10px] font-mono text-purple-400/70 uppercase tracking-widest mb-1">Hint</p>
-                      <p className="text-xs text-purple-300/80 leading-relaxed italic">{currentCard.hint}</p>
-                    </div>
-                  )}
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="prompt"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.25 }}
-                  className="space-y-3"
-                >
-                  <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-                    Click the card on the right — or press{' '}
-                    <kbd className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] font-mono text-[var(--text-muted)]">Space</kbd>
-                    {' '}— to flip it and reveal the full answer &amp; explanation here.
-                  </p>
-                  {currentCard.hint && (
-                    <button
-                      onClick={() => setShowHint(s => !s)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-xs font-mono border border-white/5"
-                    >
-                      <HelpCircle size={13} />
-                      <span>{showHint ? 'Hide Hint' : 'Show Hint'}</span>
-                    </button>
-                  )}
-                  {showHint && currentCard.hint && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="p-3 rounded-lg bg-purple-500/5 border border-purple-500/10"
-                    >
-                      <p className="text-xs text-purple-300/80 leading-relaxed italic">{currentCard.hint}</p>
-                    </motion.div>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* Explanation panel */}
+            {currentCard.choices ? (
+              /* Dedicated MCQ Explanation */
+              <div className="space-y-3">
+                <span className="text-[10px] font-mono text-emerald-400/80 uppercase tracking-widest">Answer / Explanation</span>
+                <p className="text-sm text-[var(--text-primary)] leading-relaxed">{currentCard.explanation || currentCard.back}</p>
+                {currentCard.hint && (
+                  <div className="mt-2 p-3 rounded-lg bg-purple-500/5 border border-purple-500/10">
+                    <p className="text-[10px] font-mono text-purple-400/70 uppercase tracking-widest mb-1">Hint</p>
+                    <p className="text-xs text-purple-300/80 leading-relaxed italic">{currentCard.hint}</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Standard Flashcard Explanation (Flipped Check) */
+              <AnimatePresence mode="wait">
+                {isFlipped ? (
+                  <motion.div
+                    key="answer"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.25 }}
+                    className="space-y-3"
+                  >
+                    <span className="text-[10px] font-mono text-emerald-400/80 uppercase tracking-widest">Answer / Explanation</span>
+                    <p className="text-sm text-[var(--text-primary)] leading-relaxed">{currentCard.explanation || currentCard.back}</p>
+                    {currentCard.hint && (
+                      <div className="mt-2 p-3 rounded-lg bg-purple-500/5 border border-purple-500/10">
+                        <p className="text-[10px] font-mono text-purple-400/70 uppercase tracking-widest mb-1">Hint</p>
+                        <p className="text-xs text-purple-300/80 leading-relaxed italic">{currentCard.hint}</p>
+                      </div>
+                    )}
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="prompt"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.25 }}
+                    className="space-y-3"
+                  >
+                    <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                      Click the card on the right — or press{' '}
+                      <kbd className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] font-mono text-[var(--text-muted)]">Space</kbd>
+                      {' '}— to flip it and reveal the full answer &amp; explanation here.
+                    </p>
+                    {currentCard.hint && (
+                      <button
+                        onClick={() => setShowHint(s => !s)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-xs font-mono border border-white/5"
+                      >
+                        <HelpCircle size={13} />
+                        <span>{showHint ? 'Hide Hint' : 'Show Hint'}</span>
+                      </button>
+                    )}
+                    {showHint && currentCard.hint && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-3 rounded-lg bg-purple-500/5 border border-purple-500/10"
+                      >
+                        <p className="text-xs text-purple-300/80 leading-relaxed italic">{currentCard.hint}</p>
+                      </motion.div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            )}
 
             {/* Controls */}
             <div className="flex flex-col gap-3 pt-2">
@@ -712,139 +719,140 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
 
               {/* Save Deck */}
               <div className="pt-2 border-t border-white/5">
-                <Button onClick={handleSave} loading={isSaving} className="w-full flex items-center justify-center gap-2">
+                <Button onClick={handleSave} loading={isSaving} className="w-full flex items-center justify-center gap-2 animate-none">
                   <Check size={16} /><span>Save deck</span>
                 </Button>
               </div>
             </div>
           </div>
 
-          {/* RIGHT: Large Flip Card */}
-          <div className="flex items-start justify-center order-1 lg:order-2">
-            <div
-              ref={reviewCardRef}
-              onClick={() => { setIsFlipped(f => !f); setShowHint(false); }}
-              className="cursor-pointer select-none w-full mx-auto"
-              style={{ perspective: '1400px', aspectRatio: '1 / 1', maxWidth: '580px' }}
-            >
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentCardIndex}
-                  initial={{ opacity: 0, scale: 0.94 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.94 }}
-                  transition={{ duration: 0.2 }}
-                  className="w-full h-full"
-                >
-                  <div
-                    className="relative w-full h-full"
-                    style={{
-                      transformStyle: 'preserve-3d',
-                      transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
-                      transition: 'transform 0.45s cubic-bezier(0.4, 0, 0.2, 1)',
-                      willChange: 'transform',
-                    }}
+          {/* RIGHT: Large Flip Card (only for standard flashcards) */}
+          {!currentCard.choices && (
+            <div className="flex items-start justify-center order-1 lg:order-2 w-full">
+              <div
+                ref={reviewCardRef}
+                onClick={() => { setIsFlipped(f => !f); setShowHint(false); }}
+                className="cursor-pointer select-none w-full mx-auto"
+                style={{ perspective: '1400px', aspectRatio: '1 / 1', maxWidth: '580px' }}
+              >
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentCardIndex}
+                    initial={{ opacity: 0, scale: 0.94 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.94 }}
+                    transition={{ duration: 0.2 }}
+                    className="w-full h-full"
                   >
-                    {/* Card Front */}
                     <div
-                      className="absolute inset-0 w-full h-full rounded-3xl overflow-hidden"
-                      style={{ backfaceVisibility: 'hidden' }}
+                      className="relative w-full h-full"
+                      style={{
+                        transformStyle: 'preserve-3d',
+                        transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                        transition: 'transform 0.45s cubic-bezier(0.4, 0, 0.2, 1)',
+                        willChange: 'transform',
+                      }}
                     >
-                      <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a2e] via-[#16161a] to-[#0f0f14] rounded-3xl border border-white/[0.08]" />
-                      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-purple-500/50 to-transparent" />
-                      <div className="absolute -top-20 -right-20 w-64 h-64 bg-purple-600/[0.07] rounded-full blur-3xl pointer-events-none" />
-                      <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-violet-500/[0.04] rounded-full blur-3xl pointer-events-none" />
-                      <div className="relative z-10 flex flex-col h-full p-8">
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] font-mono text-purple-400/80 uppercase tracking-[0.18em]">Question</span>
-                            <div className="flex items-center gap-1 bg-white/5 p-0.5 rounded-lg border border-white/5 ml-2">
-                              <button
-                                type="button"
-                                title={isSpeaking ? "Stop speaking" : "Speak question"}
-                                className="p-1 rounded hover:bg-white/10 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-                                onClick={(e) => handleSpeak(e, currentCard.front)}
-                              >
-                                <Volume2 size={12} className={cn(isSpeaking ? "animate-pulse text-purple-400" : "")} />
-                              </button>
-                              <button
-                                type="button"
-                                title="Switch pronunciation language (English / Hindi)"
-                                className="px-1.5 py-0.5 rounded hover:bg-white/10 text-[9px] font-bold text-purple-400 hover:text-purple-300 transition-colors tracking-tight font-sans"
-                                onClick={toggleLanguage}
-                              >
-                                {ttsLang === 'en' ? 'EN' : 'HI'}
-                              </button>
+                      {/* Card Front */}
+                      <div
+                        className="absolute inset-0 w-full h-full rounded-3xl overflow-hidden"
+                        style={{ backfaceVisibility: 'hidden' }}
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a2e] via-[#16161a] to-[#0f0f14] rounded-3xl border border-white/[0.08]" />
+                        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-purple-500/50 to-transparent" />
+                        <div className="absolute -top-20 -right-20 w-64 h-64 bg-purple-600/[0.07] rounded-full blur-3xl pointer-events-none" />
+                        <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-violet-500/[0.04] rounded-full blur-3xl pointer-events-none" />
+                        <div className="relative z-10 flex flex-col h-full p-8">
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] font-mono text-purple-400/80 uppercase tracking-[0.18em]">Question</span>
+                              <div className="flex items-center gap-1 bg-white/5 p-0.5 rounded-lg border border-white/5 ml-2">
+                                <button
+                                  type="button"
+                                  title={isSpeaking ? "Stop speaking" : "Speak question"}
+                                  className="p-1 rounded hover:bg-white/10 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                                  onClick={(e) => handleSpeak(e, currentCard.front)}
+                                >
+                                  <Volume2 size={12} className={cn(isSpeaking ? "animate-pulse text-purple-400" : "")} />
+                                </button>
+                                <button
+                                  type="button"
+                                  title="Switch pronunciation language (English / Hindi)"
+                                  className="px-1.5 py-0.5 rounded hover:bg-white/10 text-[9px] font-bold text-purple-400 hover:text-purple-300 transition-colors tracking-tight font-sans"
+                                  onClick={toggleLanguage}
+                                >
+                                  {ttsLang === 'en' ? 'EN' : 'HI'}
+                                </button>
+                              </div>
                             </div>
+                            <span className="text-[10px] font-mono text-[var(--text-muted)]">{currentCardIndex + 1} / {generatedCards.length}</span>
                           </div>
-                          <span className="text-[10px] font-mono text-[var(--text-muted)]">{currentCardIndex + 1} / {generatedCards.length}</span>
-                        </div>
-                        <div className="flex-1 flex items-center justify-center px-3">
-                          <h2 className="text-2xl font-semibold text-[var(--text-primary)] text-center leading-relaxed select-none">
-                            {currentCard.front}
-                          </h2>
-                        </div>
-                        <div className="text-center">
-                          <span className="text-[10px] text-[var(--text-muted)] font-mono tracking-widest uppercase">Click to flip ↻</span>
+                          <div className="flex-1 flex items-center justify-center px-3">
+                            <h2 className="text-2xl font-semibold text-[var(--text-primary)] text-center leading-relaxed select-none">
+                              {currentCard.front}
+                            </h2>
+                          </div>
+                          <div className="text-center">
+                            <span className="text-[10px] text-[var(--text-muted)] font-mono tracking-widest uppercase">Click to flip ↻</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Card Back */}
-                    <div
-                      className="absolute inset-0 w-full h-full rounded-3xl overflow-hidden"
-                      style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-br from-[#0f1e1a] via-[#131a18] to-[#0a120f] rounded-3xl border border-emerald-500/[0.14]" />
-                      <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent" />
-                      <div className="absolute -top-20 -right-20 w-64 h-64 bg-emerald-500/[0.06] rounded-full blur-3xl pointer-events-none" />
-                      <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-teal-500/[0.04] rounded-full blur-3xl pointer-events-none" />
-                      <div className="relative z-10 flex flex-col h-full p-8">
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] font-mono text-emerald-400/80 uppercase tracking-[0.18em]">Answer</span>
-                            <div className="flex items-center gap-1 bg-white/5 p-0.5 rounded-lg border border-white/5 ml-2">
-                              <button
-                                type="button"
-                                title={isSpeaking ? "Stop speaking" : "Speak answer"}
-                                className="p-1 rounded hover:bg-white/10 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-                                onClick={(e) => handleSpeak(e, currentCard.back)}
-                              >
-                                <Volume2 size={12} className={cn(isSpeaking ? "animate-pulse text-emerald-400" : "")} />
-                              </button>
-                              <button
-                                type="button"
-                                title="Switch pronunciation language (English / Hindi)"
-                                className="px-1.5 py-0.5 rounded hover:bg-white/10 text-[9px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors tracking-tight font-sans"
-                                onClick={toggleLanguage}
-                              >
-                                {ttsLang === 'en' ? 'EN' : 'HI'}
-                              </button>
+                      {/* Card Back */}
+                      <div
+                        className="absolute inset-0 w-full h-full rounded-3xl overflow-hidden"
+                        style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-br from-[#0f1e1a] via-[#131a18] to-[#0a120f] rounded-3xl border border-emerald-500/[0.14]" />
+                        <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent" />
+                        <div className="absolute -top-20 -right-20 w-64 h-64 bg-emerald-500/[0.06] rounded-full blur-3xl pointer-events-none" />
+                        <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-teal-500/[0.04] rounded-full blur-3xl pointer-events-none" />
+                        <div className="relative z-10 flex flex-col h-full p-8">
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] font-mono text-emerald-400/80 uppercase tracking-[0.18em]">Answer</span>
+                              <div className="flex items-center gap-1 bg-white/5 p-0.5 rounded-lg border border-white/5 ml-2">
+                                <button
+                                  type="button"
+                                  title={isSpeaking ? "Stop speaking" : "Speak answer"}
+                                  className="p-1 rounded hover:bg-white/10 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                                  onClick={(e) => handleSpeak(e, currentCard.back)}
+                                >
+                                  <Volume2 size={12} className={cn(isSpeaking ? "animate-pulse text-emerald-400" : "")} />
+                                </button>
+                                <button
+                                  type="button"
+                                  title="Switch pronunciation language (English / Hindi)"
+                                  className="px-1.5 py-0.5 rounded hover:bg-white/10 text-[9px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors tracking-tight font-sans"
+                                  onClick={toggleLanguage}
+                                >
+                                  {ttsLang === 'en' ? 'EN' : 'HI'}
+                                </button>
+                              </div>
                             </div>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setIsFlipped(false); }}
+                              className="p-1.5 rounded-md hover:bg-white/5 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+                            >
+                              <RotateCcw size={14} />
+                            </button>
                           </div>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setIsFlipped(false); }}
-                            className="p-1.5 rounded-md hover:bg-white/5 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-                          >
-                            <RotateCcw size={14} />
-                          </button>
-                        </div>
-                        <div className="flex-1 flex items-center justify-center px-3">
-                          <p className="text-xl font-medium text-[var(--text-primary)] text-center leading-relaxed select-none">
-                            {currentCard.back}
-                          </p>
-                        </div>
-                        <div className="text-center">
-                          <span className="text-[10px] text-[var(--text-muted)] font-mono tracking-widest uppercase">How well did you remember?</span>
+                          <div className="flex-1 flex items-center justify-center px-3">
+                            <p className="text-xl font-medium text-[var(--text-primary)] text-center leading-relaxed select-none">
+                              {currentCard.back}
+                            </p>
+                          </div>
+                          <div className="text-center">
+                            <span className="text-[10px] text-[var(--text-muted)] font-mono tracking-widest uppercase">How well did you remember?</span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </motion.div>
-              </AnimatePresence>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
             </div>
-          </div>
-
+          )}
         </div>
       </div>
     );
