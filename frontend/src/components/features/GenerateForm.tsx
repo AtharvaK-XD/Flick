@@ -51,11 +51,6 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
   const [lastContent, setLastContent] = useState('');
   const [selectedModel, setSelectedModel] = useState<string>('gemini-2.5-flash');
 
-  // Reset selected choice when card index changes
-  useEffect(() => {
-    setSelectedChoice(null);
-  }, [currentCardIndex]);
-
   // Helper to identify models with 15 card limit
   const isModelLimited = (modelId: string) => {
     return modelId === 'llama-3.1-8b-instant';
@@ -74,6 +69,11 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [cardResults, setCardResults] = useState<Map<number, 'right' | 'wrong'>>(new Map());
+
+  // Reset selected choice when card index changes
+  useEffect(() => {
+    setSelectedChoice(null);
+  }, [currentCardIndex]);
 
   // Drag and Drop State
   const [isDragActive, setIsDragActive] = useState(false);
