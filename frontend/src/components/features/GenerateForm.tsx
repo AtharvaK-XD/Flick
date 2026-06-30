@@ -68,6 +68,7 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [cardResults, setCardResults] = useState<Map<number, 'right' | 'wrong'>>(new Map());
+  const [reviewSelections, setReviewSelections] = useState<Map<number, string>>(new Map());
 
   // Drag and Drop State
   const [isDragActive, setIsDragActive] = useState(false);
@@ -322,7 +323,7 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
         ? (localStorage.getItem('flick_custom_groq_key') || undefined)
         : (localStorage.getItem('flick_custom_gemini_key') || undefined);
         
-      setGenerationStep('Building cards...');
+      setGenerationStep(generationMode === 'mcq' ? 'Building MCQs...' : 'Building cards...');
       const result = await generateCards(contentToProcess, cardCount, customKey, selectedModel, generationMode);
       
       if (result.cards && result.cards.length > 0) {
