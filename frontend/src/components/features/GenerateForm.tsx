@@ -962,95 +962,120 @@ export function GenerateForm({ onSaveDeck, onPhaseChange }: GenerateFormProps) {
 
         <form onSubmit={handleGenerate} className="space-y-6">
           {/* Tab Content Panels */}
-          <div className="min-h-[140px]">
-            {activeTab === 'text' && (
-              <div className="animate-fade-up text-left">
-                <textarea
-                  value={textInput}
-                  onChange={(e) => setTextInput(e.target.value)}
-                  placeholder="Paste your study notes, an article, a Wikipedia section — anything..."
-                  className="input-theme w-full h-40 p-4 text-sm placeholder-[var(--text-muted)] resize-none"
-                />
-              </div>
-            )}
+          <div className="min-h-[140px] relative overflow-hidden">
+            <AnimatePresence mode="wait">
+              {activeTab === 'text' && (
+                <motion.div
+                  key="text"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="text-left animate-none"
+                >
+                  <textarea
+                    value={textInput}
+                    onChange={(e) => setTextInput(e.target.value)}
+                    placeholder="Paste your study notes, an article, a Wikipedia section — anything..."
+                    className="input-theme w-full h-40 p-4 text-sm placeholder-[var(--text-muted)] resize-none"
+                  />
+                </motion.div>
+              )}
 
-            {activeTab === 'pdf' && (
-              <div className="animate-fade-up">
-                {!pdfFile ? (
-                  <div
-                    onDragEnter={handleDrag}
-                    onDragOver={handleDrag}
-                    onDragLeave={handleDrag}
-                    onDrop={handleDrop}
-                    onClick={() => fileInputRef.current?.click()}
-                    className={cn(
-                      "border border-dashed rounded-lg h-40 flex flex-col justify-center items-center cursor-pointer transition-colors duration-150 p-6 text-center",
-                      isDragActive 
-                        ? "border-purple-500 bg-purple-500/5" 
-                        : "border-[var(--border)] bg-app hover:border-[var(--border-hover)]"
-                    )}
-                  >
-                    <Upload className="text-[var(--text-secondary)] mb-3" size={24} />
-                    <p className="text-sm font-medium text-[var(--text-primary)]">
-                      Drop your PDF here
-                    </p>
-                    <p className="text-xs text-[var(--text-secondary)] mt-1">
-                      or click to browse files
-                    </p>
+              {activeTab === 'pdf' && (
+                <motion.div
+                  key="pdf"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="animate-none"
+                >
+                  {!pdfFile ? (
+                    <motion.div
+                      onDragEnter={handleDrag}
+                      onDragOver={handleDrag}
+                      onDragLeave={handleDrag}
+                      onDrop={handleDrop}
+                      onClick={() => fileInputRef.current?.click()}
+                      className={cn(
+                        "border border-dashed rounded-lg h-40 flex flex-col justify-center items-center cursor-pointer transition-colors duration-200 p-6 text-center",
+                        isDragActive 
+                          ? "border-purple-500 bg-purple-500/5 shadow-[0_0_15px_rgba(124,58,237,0.08)]" 
+                          : "border-[var(--border)] bg-app hover:border-[var(--border-hover)]"
+                      )}
+                      animate={isDragActive ? { scale: 1.01 } : { scale: 1 }}
+                      whileHover={{ scale: 1.005 }}
+                    >
+                      <Upload className={cn("mb-3 transition-colors", isDragActive ? "text-purple-400" : "text-[var(--text-secondary)]")} size={24} />
+                      <p className="text-sm font-medium text-[var(--text-primary)]">
+                        Drop your PDF here
+                      </p>
+                      <p className="text-xs text-[var(--text-secondary)] mt-1">
+                        or click to browse files
+                      </p>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pdf"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                    </motion.div>
+                  ) : (
+                    <div className="border border-[var(--border)] bg-app rounded-lg p-6 flex items-center justify-between h-40">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 font-mono text-xs font-bold uppercase">
+                          PDF
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-medium text-[var(--text-primary)] max-w-xs truncate">
+                            {pdfFile.name}
+                          </p>
+                          <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+                            {(pdfFile.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={clearPdf}
+                        className="text-[var(--text-secondary)] hover:text-red-400 transition-colors p-1"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              {activeTab === 'url' && (
+                <motion.div
+                  key="url"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex flex-col justify-center h-40 space-y-2 animate-none"
+                >
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]">
+                      <Link2 size={16} />
+                    </span>
                     <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".pdf"
-                      onChange={handleFileChange}
-                      className="hidden"
+                      type="url"
+                      value={urlInput}
+                      onChange={(e) => setUrlInput(e.target.value)}
+                      placeholder="https://en.wikipedia.org/wiki/..."
+                      className="input-theme w-full pl-11 pr-4 py-3 text-sm"
                     />
                   </div>
-                ) : (
-                  <div className="border border-[var(--border)] bg-app rounded-lg p-6 flex items-center justify-between h-40">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 font-mono text-xs font-bold uppercase">
-                        PDF
-                      </div>
-                      <div className="text-left">
-                        <p className="text-sm font-medium text-[var(--text-primary)] max-w-xs truncate">
-                          {pdfFile.name}
-                        </p>
-                        <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-                          {(pdfFile.size / 1024 / 1024).toFixed(2)} MB
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={clearPdf}
-                      className="text-[var(--text-secondary)] hover:text-red-400 transition-colors p-1"
-                    >
-                      <X size={18} />
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {activeTab === 'url' && (
-              <div className="animate-fade-up flex flex-col justify-center h-40 space-y-2">
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]">
-                    <Link2 size={16} />
-                  </span>
-                  <input
-                    type="url"
-                    value={urlInput}
-                    onChange={(e) => setUrlInput(e.target.value)}
-                    placeholder="https://en.wikipedia.org/wiki/..."
-                    className="input-theme w-full pl-11 pr-4 py-3 text-sm"
-                  />
-                </div>
-                <p className="text-xs text-[var(--text-secondary)] pl-1 text-left">
-                  Works with Wikipedia, blog posts, documentation, news articles.
-                </p>
-              </div>
-            )}
+                  <p className="text-xs text-[var(--text-secondary)] pl-1 text-left">
+                    Works with Wikipedia, blog posts, documentation, news articles.
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Form Settings Controls */}
